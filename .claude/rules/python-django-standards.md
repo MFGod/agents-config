@@ -1,0 +1,88 @@
+---
+paths:
+  - "config/**/*.py"
+  - "manage.py"
+  - "src/application/**/*.py"
+  - "src/api/**/*.py"
+  - "src/bootstrap/**/*.py"
+  - "src/engine/**/*.py"
+  - "src/infra/**/*.py"
+  - "src/workers/**/*.py"
+  - "src/adapters/**/*.py"
+---
+
+<!-- SYNC: .cursor/rules/python-django-standards.mdc -->
+
+# Python Django
+
+Эталон: мультиплатформенный backend с `config/`, слоями `api` → `application` → `engine` → `infra`/`adapters`, Celery workers.
+Дополняет `global-standards.md`. Не смешивай с FastAPI-паттернами.
+
+## Слои и зависимости
+
+| Слой | Ответственность |
+|------|----------------|
+| `src/api/` | HTTP views, статус-коды, парсинг, auth webhooks |
+| `src/application/` | `ApplicationFacade`, entrypoints, application DTO |
+| `src/engine/` | Диалог, actions — без прямых HTTP/Redis-клиентов |
+| `src/infra/` | Redis, HTTP-клиенты, Protocol + Pydantic schemas |
+| `src/adapters/` | Платформы (MAX, Telegram, VK) |
+| `src/bootstrap/` | Builders, containers, wiring |
+| `src/workers/` | Celery tasks, management commands |
+
+Правила:
+- `engine` не ходит в Redis/HTTP напрямую — только через порты/infra.
+- `engine` может читать `django.conf.settings` (флаги) — допустимо.
+- `api` делегирует в facade — никакой бизнес-логики.
+- Новые интеграции — `infra/<name>/protocols.py` + client + schemas + mock.
+
+## Settings
+
+- `config/settings/base.py`, `python-decouple`; секреты из env, не в коде.
+- Поведение — флаги в settings, не разветвление без setting.
+- `django.conf.settings` в любом слое — нормально; не дублируй чтение env вне settings.
+
+## Views и API
+
+- Webhook: `@csrf_exempt`, ранняя валидация (method, secret, JSON shape), `async def` при async pipeline.
+- Тонкий view: parse → log → facade/producer. Ответы — `JsonResponse` с явными статусами.
+- DRF: сериализаторы для валидации; `permission_classes`.
+
+## Celery
+
+**Критичная задача** — влияет на пользовательские данные, уведомления, интеграции, billing.
+
+- `acks_late=True`, `reject_on_worker_lost=True` для критичных задач.
+- `autoretry_for=(TransientWorkerError,)` — только transient (сетевые, 429/502/503/504, Redis timeout). Permanent (ValidationError, бизнес-ошибки) — **не ретраить**.
+- Payload typed (DTO/dataclass). `bind_request_context(trace_id=self.request.id)` в начале task.
+- Тяжёлая логика — в `*TaskService`, task ≤20 строк.
+
+## Инфраструктура
+
+- **Логирование:** `get_app_logger(__name__)`; structured: `event=`, `fields=`, `context=`; middleware `RequestLoggingContextMiddleware`.
+- **ORM:** `select_related`/`prefetch_related` для связанных запросов; `@transaction.atomic` для связанных записей.
+- **Миграции:** новая после изменения моделей; применённые — не редактировать.
+- **Интеграции:** `typing.Protocol` + client + schemas + mock_client; coercion в client layer, не в engine.
+- **Инструменты:** ruff + black, line-length 100, py312; `ruff check src/ config/` перед коммитом.
+
+## Тесты
+
+- `tests/unit/` — изолированная логика, mocks protocols.
+- `tests/integration/` — workers, redis, task execution.
+- `tests/_env.py` — env **до** импортов Django/Celery/src (импортируй первым в conftest.py).
+
+## Антипаттерны
+
+- HTTP из `engine/actions` напрямую; Celery task 100+ строк без service.
+- `autoretry_for=(Exception,)` — ретрай permanent errors.
+- Правка применённых миграций.
+
+## Чеклист
+
+LAYER BOUNDARY CHECK:
+- `engine` не вызывает HTTP/Redis/Celery (только infra)?
+- `api` делегирует, не содержит логику? Новая интеграция: Protocol + client + schemas в `infra/`?
+
+CELERY/QUEUE CHECK:
+- Критичная task: `acks_late=True`, `reject_on_worker_lost=True`?
+- `autoretry_for` только `TransientWorkerError`, payload typed, task ≤20 строк?

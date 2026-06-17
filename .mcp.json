@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "headroom": {
+      "command": "uvx",
+      "args": ["--from", "headroom-ai==0.26.0", "headroom", "mcp", "serve"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@3.2.1"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@0.0.76"]
+    }
+  }
+}

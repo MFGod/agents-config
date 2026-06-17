@@ -1,0 +1,155 @@
+---
+paths:
+  - "tests/**"
+  - "test/**"
+  - "**/test_*"
+  - "**/*_test.*"
+  - "**/*.test.*"
+  - "**/*.spec.*"
+---
+
+<!-- SYNC: .cursor/rules/testing-standards.mdc -->
+
+# Testing Standards
+
+Дополняет `dev-workflow.md` (когда писать тесты). Этот файл — **как** писать хорошие тесты.
+
+## Структура теста — AAA
+
+Каждый тест: **Arrange → Act → Assert**. Три секции, один сценарий.
+
+```python
+# Python / pytest
+def test_transfer_reduces_sender_balance():
+    # Arrange
+    sender = Account(balance=100)
+    receiver = Account(balance=0)
+
+    # Act
+    transfer(sender, receiver, amount=30)
+
+    # Assert
+    assert sender.balance == 70
+```
+
+```typescript
+// TypeScript / vitest / jest
+it('reduces sender balance on transfer', () => {
+  // Arrange
+  const sender = new Account({ balance: 100 });
+  const receiver = new Account({ balance: 0 });
+
+  // Act
+  transfer(sender, receiver, { amount: 30 });
+
+  // Assert
+  expect(sender.balance).toBe(70);
+});
+```
+
+**Один тест — один сценарий.** Нет: "тест всего метода transfer". Да: "transfer уменьшает баланс отправителя".
+
+## Именование
+
+Паттерн: `test_<что>_when_<условие>_then_<ожидание>` (Python) / `'<что> <условие> <ожидание>'` (JS).
+
+```python
+# Python
+def test_transfer_when_insufficient_funds_then_raises_error(): ...
+def test_transfer_when_same_account_then_no_op(): ...
+def test_transfer_when_amount_zero_then_balances_unchanged(): ...
+
+# Jest / vitest
+describe('transfer', () => {
+  it('raises InsufficientFundsError when balance is too low', () => ...);
+  it('does nothing when sender and receiver are the same account', () => ...);
+});
+```
+
+Имя теста — документация. Читая его — понимаешь что сломалось без открытия файла.
+
+## Что мокировать
+
+**Только внешний I/O:**
+
+| Мокировать ✅ | Не мокировать ❌ |
+|---|---|
+| HTTP-запросы к внешним API | Бизнес-логику внутри модуля |
+| Запросы к БД (в unit-тестах) | Стандартные библиотеки |
+| FS-операции (чтение/запись файлов) | Простые утилиты и хелперы |
+| Очереди сообщений (Celery, Redis) | Функции без side effects |
+| Email/SMS-отправку | datetime.now() — если не тестируешь время-зависимое |
+
+**Правило:** если убрать мок и запустить тест — он упадёт из-за сети/FS/БД → мок оправдан. Если тест пройдёт и без мока → мок лишний.
+
+```python
+# ✅ Правильно — мок внешнего API
+def test_send_notification_calls_email_service(mocker):
+    mock_send = mocker.patch('myapp.email_service.send')
+    send_notification(user_id=1, message='Hello')
+    mock_send.assert_called_once_with(to='user@example.com', body='Hello')
+
+# ❌ Неправильно — мок внутренней логики
+def test_calculate_discount(mocker):
+    mocker.patch('myapp.pricing.apply_tier')  # зачем? это внутренняя функция
+    ...
+```
+
+## Изоляция
+
+- **Нет общего mutable state** между тестами. Каждый тест независим.
+- **Нет порядковой зависимости** — тест B не должен требовать чтобы тест A прошёл первым.
+- **Фикстуры** вместо `setUp`/`tearDown` там где это поддерживается (pytest fixtures, beforeEach).
+- **Временные данные** — создавай в тесте, удаляй после. Никогда не используй prod/staging данные.
+
+```python
+# pytest fixture — правильная изоляция
+@pytest.fixture
+def account():
+    return Account(balance=100, owner='Alice')
+
+def test_deposit_increases_balance(account):
+    account.deposit(50)
+    assert account.balance == 150
+
+def test_withdraw_decreases_balance(account):
+    account.withdraw(30)
+    assert account.balance == 70
+# Оба теста получают свежий account, не влияют друг на друга
+```
+
+## Что НЕ тестировать
+
+- **Приватные методы** — тестируй через публичный интерфейс. Если приватное сложно покрыть — это сигнал рефакторинга.
+- **Тривиальные геттеры/сеттеры** без логики.
+- **Framework internals** — ORM, HTTP-клиент, сам pytest/jest.
+- **Конфигурацию** — настройки, env vars, константы.
+- **Код который ты не написал** — сторонние библиотеки.
+
+## Unit vs Integration
+
+| Unit | Integration |
+|---|---|
+| Одна функция / класс | Несколько слоёв (API → сервис → БД) |
+| Все внешние зависимости замоканы | Реальная БД / реальный Redis |
+| Миллисекунды | Секунды |
+| Тестирует логику | Тестирует взаимодействие |
+| Первый барьер | Второй барьер |
+
+**Правило 80/20:** 80% unit, 20% integration. Интеграционные тесты — только для критичных путей (auth, платежи, core business flow).
+
+## Coverage
+
+- **Цель не 100%** — цель: покрыть все ветви бизнес-логики и edge cases.
+- **Red flag:** coverage 95%+ но все тесты тривиальные → coverage как метрика не работает.
+- **Что точно покрывать:** error paths, граничные значения, happy path, side effects.
+- **Что не гнаться покрывать:** конфигурационные файлы, auto-generated код, migrations.
+
+## Фреймворки по стеку
+
+| Стек | Unit | Integration | Assertions |
+|---|---|---|---|
+| Python | pytest | pytest + реальная БД | assert, pytest.raises |
+| FastAPI | pytest + TestClient | pytest + TestClient | assert response.status_code |
+| JavaScript/TS | vitest / jest | supertest | expect().toBe/toEqual |
+| Vue | vitest + @vue/test-utils | Playwright | expect().toContain |

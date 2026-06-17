@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, test]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          cache: "pip"
+
+      - name: Shell syntax (bash -n)
+        run: |
+          for f in install.sh .claude/hooks/*.sh .cursor/hooks/*.sh; do
+            bash -n "$f"
+          done
+
+      - name: Shellcheck
+        run: |
+          shellcheck -S warning install.sh .claude/hooks/*.sh .cursor/hooks/*.sh
+
+      - name: JS syntax (node --check)
+        run: |
+          for f in .claude/hooks/*.js .cursor/hooks/*.js; do
+            node --check "$f"
+          done
+
+      - name: Python compile
+        run: python3 -m py_compile .claude/skills/caveman-compress/scripts/*.py
+
+      - name: JSON valid
+        run: |
+          for f in .mcp.json .cursor/mcp.json .claude/settings-template.json .cursor/hooks.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
+          done
+
+      - name: Unit tests (JS)
+        run: node --test
+
+      - name: Python lint (ruff — pyflakes + syntax errors)
+        run: |
+          python3 -m pip install ruff
+          ruff check --select F,E9 --ignore F811 .claude/skills/caveman-compress/scripts/
+
+      - name: Python unit tests
+        run: python3 -m unittest discover -s test -p 'test_*.py' -v
+
+      - name: MCP package version check
+        run: node .claude/scripts/check-mcp-versions.js
+
+      - name: cursor-rules sync check (.claude/rules vs .cursor/rules)
+        run: node .claude/scripts/check-cursor-sync.js
+
+      - name: Install smoke test
+        run: |
+          mkdir -p /tmp/kit-target
+          bash install.sh /tmp/kit-target --yes --stacks all
+          test -f /tmp/kit-target/.claude/hooks/safety-guard.js
+          test -f /tmp/kit-target/.cursor/hooks/safety-guard.js

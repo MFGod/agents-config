@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Вопрос по использованию
+    url: https://github.com/MFGod/agents-config/discussions
+    about: Вопросы по установке и настройке — в Discussions, не в Issues.
+  - name: Уязвимость безопасности
+    url: https://github.com/MFGod/agents-config/security/advisories/new
+    about: Сообщай приватно через Security Advisories, не публичным Issue.

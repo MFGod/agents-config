@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node \".cursor/hooks/caveman-activate.js\"",
+        "timeout": 5
+      },
+      {
+        "command": "node \".cursor/hooks/headroom-activate.js\"",
+        "timeout": 5
+      },
+      {
+        "command": "node \".cursor/hooks/rtk-activate.js\"",
+        "timeout": 5
+      }
+    ],
+    "preToolUse": [
+      {
+        "matcher": "Shell",
+        "command": "node \".cursor/hooks/safety-guard.js\"",
+        "timeout": 5,
+        "failClosed": false
+      },
+      {
+        "matcher": "Shell",
+        "command": "bash \".cursor/hooks/rtk-rewrite.sh\"",
+        "timeout": 5,
+        "failClosed": false
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "bash \".cursor/hooks/safety-guard.sh\"",
+        "timeout": 5,
+        "failClosed": false
+      }
+    ],
+    "preCompact": [
+      {
+        "command": "node \".cursor/hooks/pre-compact.js\"",
+        "timeout": 5
+      }
+    ]
+  }
+}

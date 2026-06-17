@@ -1,0 +1,72 @@
+{
+  "effortLevel": "high",
+  "language": "russian",
+  "permissions": {},
+  "theme": "dark-ansi",
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/session-activate.js\"",
+            "timeout": 5,
+            "statusMessage": "Activating session modes..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/mode-tracker.js\"",
+            "timeout": 5,
+            "statusMessage": "Tracking modes..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/safety-guard.js\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash \".claude/hooks/rtk-rewrite.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "_doc": "Шаблон: замени command на свой лintер/форматтер после Edit/Write. Или удали этот блок.",
+        "matcher": "Write|Edit",
+        "hooks": []
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \".claude/hooks/stop-check.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash \".claude/hooks/caveman-statusline.sh\""
+  }
+}

@@ -1,0 +1,133 @@
+---
+description: Безопасный workflow миграций — Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify. Блокирует apply без backup и rollback plan. Подключай при миграциях БД, schema changes, data transforms. alwaysApply: false — через @migrate или явный запрос.
+alwaysApply: false
+---
+<!-- SYNC: .claude/skills/migrate/SKILL.md -->
+
+---
+name: migrate
+description: >
+  Безопасный workflow миграций: Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify.
+  Блокирует apply без explicit rollback plan. Работает с DB-миграциями, data transforms,
+  schema changes, API version upgrades. Не запускает миграции без явного OK пользователя.
+  Trigger: "/migrate", "запусти миграцию", "migrate", "применить миграцию",
+  "schema change", "data migration", "обнови схему", "накати миграцию".
+effort: high
+---
+
+# migrate
+
+Миграции необратимы или дорого откатываются. Не пропускай фазы без явного обоснования.
+
+---
+
+## Фаза 1 — Pre-check
+
+До любых действий — собери ответы:
+
+- [ ] **Backup существует?** — ручной snapshot, pg_dump, mysqldump, S3 backup. Если нет — **СТОП**. Спроси пользователя перед продолжением.
+- [ ] **Окружение** — dev / staging / prod? Prod → повышенный риск, явное подтверждение обязательно.
+- [ ] **Downtime нужен?** — ALTER TABLE на большой таблице блокирует, online DDL (pt-online-schema-change, pglogical) или maintenance window?
+- [ ] **Зависимые сервисы** — есть ли сервисы, читающие старую схему прямо сейчас? Backward-compatible ли миграция?
+- [ ] **Тесты зелёные?** — запусти тесты до применения. Красные тесты → не мигрируй.
+
+**Выход фазы:** все пункты отвечены, backup подтверждён.
+
+---
+
+## Фаза 2 — Dry-run
+
+Выполни миграцию в режиме проверки без применения изменений:
+
+```bash
+# Django
+python manage.py migrate --plan
+python manage.py migrate --check
+
+# Alembic
+alembic upgrade head --sql   # покажет SQL без выполнения
+
+# Flyway
+flyway validate
+flyway migrate -dryRun
+
+# Prisma
+prisma migrate diff --from-schema-datasource --to-schema-datamodel prisma/schema.prisma
+
+# Node / knex
+knex migrate:latest --dry-run 2>/dev/null || knex migrate:status
+```
+
+Проверь вывод:
+- [ ] SQL/план выглядит ожидаемо (нет лишних DROP, неожиданных ALTER).
+- [ ] Нет конфликтов с существующими данными (unique constraints, not null без default).
+- [ ] Объём данных к трансформации — ожидаемый (не на порядок больше).
+
+**Выход фазы:** dry-run показал ожидаемый результат.
+
+---
+
+## Фаза 3 — Rollback Plan
+
+**Обязательно перед apply.** Запиши план явно:
+
+```
+ROLLBACK PLAN:
+1. <команда отката / down-миграция / restore из backup>
+2. <что перезапустить после отката>
+3. <проверка успеха отката>
+Ожидаемое время отката: <X минут>
+```
+
+Типы отката по убыванию предпочтения:
+1. **Down-миграция** (`migrate --rollback`, `alembic downgrade -1`) — идеально, атомарно.
+2. **Restore из backup** — если down-миграция не предусмотрена.
+3. **Ручной SQL** — только если 1 и 2 недоступны; зафиксируй точные команды.
+
+Если rollback невозможен (необратимая трансформация данных) — **скажи явно** пользователю до apply.
+
+**Выход фазы:** rollback plan записан и показан пользователю.
+
+---
+
+## Фаза 4 — Apply
+
+**Только после явного OK пользователя.**
+
+```bash
+# Покажи команду до выполнения, жди подтверждения
+echo "Выполняю: <команда>"
+# затем запускай
+```
+
+Во время apply:
+- [ ] Логи миграции на экране (не запускай в фоне).
+- [ ] При ошибке — **СТОП**, не пытайся исправить на ходу. Переходи к rollback.
+- [ ] Если partial apply (часть выполнилась, часть нет) — зафикси состояние, спроси пользователя.
+
+---
+
+## Фаза 5 — Verify
+
+После apply:
+
+- [ ] **Smoke-check схемы** — `\d tablename` / `DESCRIBE table` / `PRAGMA table_info` — структура соответствует ожидаемой.
+- [ ] **Данные** — выборочная проверка что данные не потеряны / трансформированы корректно.
+- [ ] **Тесты** — запусти тесты снова. Зелёные → миграция успешна.
+- [ ] **Зависимые сервисы** — перезапусти если нужно, проверь что читают новую схему корректно.
+
+**Выход:** все чекпоинты зелёные → миграция завершена.
+
+---
+
+## Экстренный rollback
+
+Если в Фазе 4–5 что-то пошло не так:
+
+```
+СТОП. ROLLBACK.
+Причина: <что именно пошло не так>.
+Выполняю: <rollback plan из Фазы 3>.
+```
+
+Выполни rollback. Зафикси что произошло. **Не продолжай migrate без нового pre-check.**

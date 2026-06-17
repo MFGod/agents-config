@@ -1,0 +1,13 @@
+{
+  "name": "agents-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI agent configuration kit for Claude Code and Cursor: rules, skills, lifecycle hooks.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

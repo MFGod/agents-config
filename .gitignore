@@ -1,0 +1,28 @@
+.idea/
+logs/
+log/
+__pycache__/
+.ruff_cache/
+.mypy_cache/
+venv/
+
+
+.cursor/secrets/github_token
+.claude/secrets/github_token
+
+# Runtime state 
+.cursor/hooks/state/
+
+# Локальное install-состояние (генерируется при установке, не для коммита)
+.claude/kit-meta.json
+.cursor/kit-meta.json
+
+# Личные настройки (не дистрибутив)
+.claude/settings.json
+
+# Auto-generated plugin directories
+.claude-plugin/
+.claude/.claude-plugin/
+
+# Тестовые артефакты
+.test/
