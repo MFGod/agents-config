@@ -113,19 +113,6 @@ ensure_gitignore_entry() {
   printf "  %bдобавлен%b в .gitignore: %s\n" "$GREEN" "$RESET" "$entry"
 }
 
-# Creates github_token placeholder in secrets_dir if missing; updates .gitignore.
-setup_github_token() {
-  local secrets_dir="$1"
-  local token_path="$secrets_dir/github_token"
-  if [[ ! -f "$token_path" ]]; then
-    mkdir -p "$secrets_dir"
-    printf "# GitHub Personal Access Token (scope: repo / contents:read)\n# Получить: GitHub → Settings → Developer settings → Personal access tokens\nghp_REPLACE_ME\n" > "$token_path"
-    printf "  %bсоздан%b: %s\n" "$GREEN" "$RESET" "$token_path"
-    printf "  %b!%b Вставь свой PAT для авто-проверки версий kit.\n" "$YELLOW" "$RESET"
-  fi
-  local rel="${secrets_dir#"$TARGET/"}/github_token"
-  ensure_gitignore_entry "$rel"
-}
 
 # Copies src to dst; skips if dst exists and !FORCE; skips silently if src missing.
 copy_file_safe() {
@@ -282,14 +269,8 @@ _KIT_REMOTE_URL="${_KIT_REMOTE_URL:-https://api.github.com/repos/MFGod/agents-co
 # Fetches remote kit-version; prints upgrade banner if a newer version is available.
 check_remote_version() {
   command -v curl &>/dev/null || return 0
-  local remote_ver token=""
-  token=$(grep -v '^#' "$SCRIPT_DIR/.claude/secrets/github_token" 2>/dev/null | tr -d '[:space:]') || true
-  [[ "$token" == *REPLACE_ME* ]] && token=""
-  if [[ -n "$token" ]]; then
-    remote_ver=$(curl -sf --max-time 3 -H "Authorization: Bearer $token" -H "Accept: application/vnd.github.raw" -H "User-Agent: agents-config-kit" "$_KIT_REMOTE_URL" 2>/dev/null | tr -d '[:space:]') || true
-  else
-    remote_ver=$(curl -sf --max-time 3 -H "Accept: application/vnd.github.raw" -H "User-Agent: agents-config-kit" "$_KIT_REMOTE_URL" 2>/dev/null | tr -d '[:space:]') || true
-  fi
+  local remote_ver
+  remote_ver=$(curl -sf --max-time 3 -H "Accept: application/vnd.github.raw" -H "User-Agent: agents-config-kit" "$_KIT_REMOTE_URL" 2>/dev/null | tr -d '[:space:]') || true
   # Validate: reject empty or non-version responses (e.g. HTML redirect pages)
   [[ "$remote_ver" =~ ^[0-9]+\.[0-9]+ ]] || return 0
   local cmp
@@ -403,7 +384,6 @@ install_claude_core() {
     printf "  %b!%b Адаптируй CLAUDE.md под свой проект.\n" "$YELLOW" "$RESET"
   fi
 
-  setup_github_token "$TARGET/.claude/secrets"
   write_kit_meta "$TARGET/.claude/kit-meta.json"
 }
 
@@ -439,7 +419,6 @@ install_cursor_core() {
   copy_file_safe "$SCRIPT_DIR/.claude/hooks/caveman-config.js" \
                  "$TARGET/.cursor/hooks/caveman-config.js"
 
-  setup_github_token "$TARGET/.cursor/secrets"
   write_kit_meta "$TARGET/.cursor/kit-meta.json"
 }
 
@@ -526,17 +505,6 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
     printf "    fetch       — HTTP запросы к URL, чтение веб-страниц\n"
     printf "    context7    — актуальная документация библиотек прямо в промпт\n"
   fi
-  printf "\n  %b🔑 Авто-проверка версий kit:%b\n" "$BOLD" "$RESET"
-  printf "  Вставь GitHub Personal Access Token (scope: %brepo / contents:read%b)\n" "$BOLD" "$RESET"
-  printf "  Получить: GitHub → Settings → Developer settings → Personal access tokens\n"
-  [[ "$DO_CLAUDE" == true ]] && \
-    printf "    Claude Code: %b%s/.claude/secrets/github_token%b\n" "$YELLOW" "$TARGET" "$RESET"
-  [[ "$DO_CURSOR" == true ]] && \
-    printf "    Cursor:      %b%s/.cursor/secrets/github_token%b\n" "$YELLOW" "$TARGET" "$RESET"
-  printf "  Файл%s уже создан%s с placeholder — замени %bghp_REPLACE_ME%b на свой токен.\n" \
-    "$( [[ "$DO_CLAUDE" == true ]] && [[ "$DO_CURSOR" == true ]] && echo "ы" || echo "" )" \
-    "$( [[ "$DO_CLAUDE" == true ]] && [[ "$DO_CURSOR" == true ]] && echo "ы" || echo "" )" \
-    "$BOLD" "$RESET"
 else
   printf "%bНичего не установлено.%b\n" "$YELLOW" "$RESET"
 fi
