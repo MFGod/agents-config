@@ -2,7 +2,7 @@
   "mcpServers": {
     "headroom": {
       "command": "uvx",
-      "args": ["--from", "headroom-ai==0.26.0", "headroom", "mcp", "serve"]
+      "args": ["--from", "headroom-ai[mcp]==0.26.0", "headroom", "mcp", "serve"]
     },
     "context7": {
       "command": "npx",

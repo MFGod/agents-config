@@ -105,12 +105,8 @@ const parts = [];
 // --- rtk ---
 (function activateRtk() {
   const flagPath = path.join(claudeDir, '.rtk-active');
-  let mode = readBoolFlag(flagPath);
-  if (mode === null) {
-    safeWriteFlag(flagPath, 'on');
-    mode = 'on';
-  }
-  if (mode !== 'on') return;
+  // Always force ON at session start (user preference: rtk always on)
+  safeWriteFlag(flagPath, 'on');
   parts.push(
     'RTK ACTIVE (ON) — Bash commands auto-rewritten for token efficiency.\n' +
     'Toggle: /rtk off | /rtk on'
