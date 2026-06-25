@@ -342,7 +342,7 @@ install_claude_core() {
   copy_dir "$SCRIPT_DIR/.claude/hooks"  "$TARGET/.claude/hooks" "hooks.json"
   copy_dir "$SCRIPT_DIR/.claude/agents" "$TARGET/.claude/agents"
 
-  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy; do
+  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max innovation-review benchmark anti-template; do
     copy_dir "$SCRIPT_DIR/.claude/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 

@@ -1,4 +1,4 @@
-# Agents-config v0.1.0
+# Agents-config v0.2.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platforms: Claude Code + Cursor](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Cursor-blue)](#)
@@ -19,6 +19,9 @@
 | **gstack** | Методология разработки: Think → Plan → Build → Review → Test с FROZEN GATE |
 | **Workflow skills** | Структурированные циклы: `/debug`, `/deploy`, `/migrate`, `/session-teacher`, `/caveman-commit` — ставятся всегда (CC + Cursor) |
 | **CaveCrew agents** | 4 субагента: `investigator` (поиск кода), `reviewer` (ревью), `tester` (тесты) — на haiku; `builder` (правка 1-2 файлов) наследует main-модель |
+| **Design quality pipeline** | `design-critic` — блокирует шаблонные решения, требует 3 альтернативы, benchmark против Linear/Stripe/Vercel; `before-after-reviewer` — скоринг 7 метрик до/после, блокирует деградацию |
+| **Design skills** | `/ui-ux-pro-max` — 67 стилей, 96 палитр, 57 font-пар; `/innovation-review` — gate перед реализацией (3 варианта обязательно); `/benchmark` — сравнение с топами рынка; `/anti-template` — 30+ запрещённых шаблонных паттернов |
+| **UX Review hook** | `PostToolUse` хук: автоматически задаёт 6 UX-вопросов при редактировании `.tsx / .vue / .html / .css / .scss / .svelte` |
 
 > **Режимы активны глобально.** Флаги caveman/RTK/headroom хранятся в `~/.claude/` и действуют во всех проектах одновременно. Включил `/caveman ultra` в одном — он остаётся при переходе в другой. Отключай явно: `/caveman off`, `/rtk off`.
 

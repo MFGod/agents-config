@@ -48,9 +48,19 @@
     ],
     "PostToolUse": [
       {
-        "_doc": "Шаблон: замени command на свой лintер/форматтер после Edit/Write. Или удали этот блок.",
         "matcher": "Write|Edit",
-        "hooks": []
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/post-edit-check.js\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node \".claude/hooks/ux-review.js\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [

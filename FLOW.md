@@ -102,10 +102,16 @@ flowchart TD
     S --> S3["/caveman-commit — коммит"]
     S --> S4["/caveman-review — ревью PR"]
     S --> S5["/rtk — toggle rewrite Bash"]
+    S --> S6["/ui-ux-pro-max — дизайн-гайдлайны"]
+    S --> S7["/innovation-review — 3 альтернативы до реализации"]
+    S --> S8["/benchmark — сравнение с Linear/Stripe/Vercel"]
+    S --> S9["/anti-template — блок шаблонных паттернов"]
 
     A --> A1["investigator — поиск кода\n(haiku, read-only)"]
     A --> A2["builder — правка 1-2 файла\n(sonnet)"]
     A --> A3["reviewer — ревью диффа\n(haiku)"]
+    A --> A4["design-critic — дизайн-критик\nблокирует шаблоны"]
+    A --> A5["before-after-reviewer — скоринг\nдо/после изменений"]
 ```
 
 ---
