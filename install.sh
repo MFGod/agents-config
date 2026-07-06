@@ -13,6 +13,7 @@ YES=false
 STACKS=""
 STACKS_GIVEN=false
 CAVEMAN_FLAG=false
+WITH_TOOLS=false
 # honor NO_COLOR env convention (https://no-color.org)
 if [[ -n "${NO_COLOR:-}" ]]; then _NO_COLOR=true; else _NO_COLOR=false; fi
 
@@ -25,6 +26,9 @@ usage() {
   printf "  --no-color        отключить цветной вывод\n"
   printf "  --stacks, -s LIST стек-правила через запятую: react,vue,fastapi,django,all,none\n"
   printf "  --caveman         установить Cursor caveman mode (cursor-caveman.mdc, alwaysApply)\n"
+  printf "  --with-tools      предложить установку внешних тулов (skillspector, agent-reach,\n"
+  printf "                    codebase-memory-mcp, paper mcp) — сторонний код с GitHub,\n"
+  printf "                    каждый со своим y/N подтверждением\n"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -39,6 +43,7 @@ while [[ $# -gt 0 ]]; do
                   STACKS="${STACKS:+$STACKS,}$2"
                   shift ;;
     --caveman)    CAVEMAN_FLAG=true ;;
+    --with-tools) WITH_TOOLS=true ;;
     --help|-h)    usage; exit 0 ;;
     -*)           printf "Неизвестный флаг: %s\n" "$1" >&2; usage >&2; exit 1 ;;
     *)            if [[ -z "$TARGET" ]]; then TARGET="$1"
@@ -342,8 +347,14 @@ install_claude_core() {
   copy_dir "$SCRIPT_DIR/.claude/hooks"  "$TARGET/.claude/hooks" "hooks.json"
   copy_dir "$SCRIPT_DIR/.claude/agents" "$TARGET/.claude/agents"
 
-  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max innovation-review benchmark anti-template; do
+  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max innovation-review benchmark anti-template impeccable animation-emil-kowalski; do
     copy_dir "$SCRIPT_DIR/.claude/skills/$skill" "$TARGET/.claude/skills/$skill"
+  done
+
+  # taste-skill (leonxlnx): real source lives in .agents/skills/ — .claude/skills/
+  # holds a symlink there for local dev. Target gets a plain copy, no symlink.
+  for skill in brandkit design-taste-frontend design-taste-frontend-v1 full-output-enforcement gpt-taste high-end-visual-design image-to-code imagegen-frontend-mobile imagegen-frontend-web industrial-brutalist-ui minimalist-ui redesign-existing-projects stitch-design-taste; do
+    copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 
   for rule in global-standards dev-workflow structured-response gstack-workflow git-conventions testing-standards; do
@@ -422,6 +433,56 @@ install_cursor_core() {
   write_kit_meta "$TARGET/.cursor/kit-meta.json"
 }
 
+# Installs optional external tools (machine-global, not project files).
+# Gated behind --with-tools: each install is separate third-party code fetched
+# from GitHub at runtime, so it never runs on a bare `install.sh <target>` and
+# still asks its own y/N even under --yes.
+install_external_tools() {
+  [[ "$WITH_TOOLS" == true ]] || return 0
+  printf "\n%bВнешние инструменты%b (сторонний код с GitHub, отдельное подтверждение на каждый)\n" "$BOLD" "$RESET"
+
+  if command -v uv &>/dev/null; then
+    if ask "Установить skillspector (NVIDIA, security-скан скиллов, uv tool install)? [y/N]: "; then
+      uv tool install git+https://github.com/NVIDIA/skillspector.git \
+        && printf "  %bустановлен%b: skillspector\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b skillspector: установка не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b uv не найден — skillspector пропущен (https://docs.astral.sh/uv/)\n" "$YELLOW" "$RESET"
+  fi
+
+  if command -v curl &>/dev/null; then
+    if ask "Установить codebase-memory-mcp (code-graph MCP, официальный install.sh)? [y/N]: "; then
+      curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash \
+        && printf "  %bустановлен%b: codebase-memory-mcp\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b codebase-memory-mcp: установка не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b curl не найден — codebase-memory-mcp пропущен\n" "$YELLOW" "$RESET"
+  fi
+
+  if command -v pipx &>/dev/null; then
+    if ask "Установить agent-reach (бесплатный web-доступ для агента, pipx из GitHub archive)? [y/N]: "; then
+      pipx install https://github.com/Panniantong/agent-reach/archive/main.zip \
+        && agent-reach install --env=auto \
+        && printf "  %bустановлен%b: agent-reach\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b agent-reach: установка не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b pipx не найден — agent-reach пропущен (brew install pipx)\n" "$YELLOW" "$RESET"
+  fi
+
+  if command -v claude &>/dev/null; then
+    if ask "Зарегистрировать Paper MCP (claude mcp add, требует запущенный Paper Desktop)? [y/N]: "; then
+      claude mcp add paper --transport http http://127.0.0.1:29979/mcp --scope user \
+        && printf "  %bзарегистрирован%b: paper MCP\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b paper MCP: регистрация не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b claude CLI не найден — paper MCP пропущен\n" "$YELLOW" "$RESET"
+  fi
+}
+
 # --- guards ---
 [[ -d "$TARGET" ]] || die "директория '$TARGET' не существует."
 [[ "$(realpath "$TARGET")" == "$(realpath "$SCRIPT_DIR")" ]] && \
@@ -480,6 +541,7 @@ fi
 
 [[ "$DO_CLAUDE" == true ]] && install_claude_core
 [[ "$DO_CURSOR" == true ]] && install_cursor_core
+install_external_tools
 
 printf "\n"
 if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then

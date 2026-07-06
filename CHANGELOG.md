@@ -9,6 +9,21 @@
 
 ---
 
+## [0.3.0] — 2026-07-06
+
+### Added
+
+- **Skill `impeccable`** (Paul Bakaus) — команды craft/audit/critique/polish/harden/animate и др. для UI-дизайна. Ставится через `install_claude_core` (`.claude/skills/impeccable`).
+- **Skills `taste-skill` x13** (leonxlnx) — `brandkit`, `design-taste-frontend` (+v1), `full-output-enforcement`, `gpt-taste`, `high-end-visual-design`, `image-to-code`, `imagegen-frontend-mobile`, `imagegen-frontend-web`, `industrial-brutalist-ui`, `minimalist-ui`, `redesign-existing-projects`, `stitch-design-taste`. Источник — `.agents/skills/*`, копируются как plain-файлы в целевой `.claude/skills/`.
+- **Skill `animation-emil-kowalski`** — гайдлайны по UI-анимациям (natural motion, <300ms micro-interactions, transform/opacity only, prefers-reduced-motion, interruptibility) на основе emilkowal.ski/ui/great-animations.
+- **`install.sh --with-tools`** — опциональная установка внешних тулов: `skillspector` (NVIDIA, security-скан скиллов), `codebase-memory-mcp` (code-graph MCP), `agent-reach` (бесплатный web-доступ для агента), Paper MCP. Каждый — отдельный y/N, недоступны без явного флага даже под `--yes`.
+
+### Security
+
+- Skillspector CRITICAL-находки на `impeccable` (PE3/P2/P6/LP1 — credential access, hidden instructions, prompt extraction, SSRF) вручную проверены построчно: все false positive (self-referential шум static-скана на собственном антипаттерн-детекторе skill'а). LLM-аудит недоступен (нет API-ключа).
+
+---
+
 ## [0.2.0] — 2026-06-25
 
 ### Added
