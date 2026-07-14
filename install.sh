@@ -213,7 +213,9 @@ semver_compare() {
     echo unknown; return
   fi
   local IFS='.' i
-  local -a a=($v1) b=($v2)
+  local -a a b
+  read -ra a <<< "$v1"
+  read -ra b <<< "$v2"
   for i in 0 1 2; do
     local x=${a[$i]:-0} y=${b[$i]:-0}
     x=${x%%[^0-9]*}; y=${y%%[^0-9]*}
