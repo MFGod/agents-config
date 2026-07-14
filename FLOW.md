@@ -65,7 +65,7 @@ flowchart LR
     A["Модель вызывает\nBash-инструмент"] --> B["rtk-rewrite.sh"]
     B --> C["Читает флаг\n.rtk-active"]
     C --> D{RTK on?}
-    D -- да --> E["exec rtk hook claude\n(переписывает команду)"]
+    D -- да --> E["rtk rewrite (single source of truth)\n(переписывает команду)"]
     D -- нет --> F["exit 0\n(без изменений)"]
     E --> G["Команда выполняется\nсо сжатым выводом"]
     F --> G
@@ -102,13 +102,13 @@ flowchart TD
     S --> S3["/caveman-commit — коммит"]
     S --> S4["/caveman-review — ревью PR"]
     S --> S5["/rtk — toggle rewrite Bash"]
-    S --> S6["/ui-ux-pro-max — дизайн-гайдлайны"]
-    S --> S7["/innovation-review — 3 альтернативы до реализации"]
-    S --> S8["/benchmark — сравнение с Linear/Stripe/Vercel"]
-    S --> S9["/anti-template — блок шаблонных паттернов"]
-    S --> S10["impeccable — craft/audit/critique/\npolish/harden/animate"]
-    S --> S11["taste-skill x13 — brandkit,\ndesign-taste-frontend, high-end-visual-design..."]
-    S --> S12["animation-emil-kowalski —\nnatural motion, transform/opacity, <300ms"]
+    S --> S6["/ui-ux-pro-max — стили, палитры,\nшрифтовые пары"]
+    S --> S7["/ux-core — 105 биасов:\nповеденческое обоснование"]
+    S --> S8["/self-learning — golden path\nсессии → переиспользуемый скилл"]
+    S --> S9["/prompt-library — 50 шаблонов промптов\n(explicit-only; 6 приёмов → global-standards)"]
+    S --> S10["impeccable — точка входа в дизайн:\ncraft/audit/critique/polish/harden/animate"]
+    S --> S11["taste-skill x5 — design-taste-frontend,\nredesign-existing-projects, high-end-visual-design,\nminimalist-ui + industrial-brutalist-ui (explicit)"]
+    S --> S12["emil-design-eng — UI polish,\nрешение «нужна ли анимация»"]
 
     A --> A1["investigator — поиск кода\n(haiku, read-only)"]
     A --> A2["builder — правка 1-2 файла\n(sonnet)"]
@@ -237,7 +237,7 @@ flowchart LR
     E -- нет --> RT["rtk-rewrite.sh\n(preToolUse)"]
     Z --> RT
     RT --> RT1{"RTK on?"}
-    RT1 -- да --> RT2["exec rtk hook claude\n(сжатый вывод)"]
+    RT1 -- да --> RT2["exec rtk hook cursor\n(сжатый вывод)"]
     RT1 -- нет --> RT3["exit 0"]
 ```
 
@@ -280,7 +280,7 @@ OFF сохраняется между сессиями (как RTK).
 Старт сессии    ──► session-activate.js ──► читает/пишет ──► ~/.claude/.rtk-active
                                          └──► эмитит статус (RTK ACTIVE / silent)
 Каждый промпт   ──► mode-tracker.js ──► детектирует /rtk* → обновляет флаг
-PreToolUse      ──► rtk-rewrite.sh ──► читает флаг ──► on → exec rtk hook claude
+PreToolUse      ──► rtk-rewrite.sh ──► читает флаг ──► on → rtk rewrite
 ```
 
 Первый запуск (файл отсутствует) → `"on"` по умолчанию.  

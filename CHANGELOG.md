@@ -9,6 +9,44 @@
 
 ---
 
+## [0.4.0] — 2026-07-14
+
+### Added
+
+- **Skills в Cursor.** Cursor 2.4+ читает Agent Skills из `.cursor/skills/` — тот же `SKILL.md`-стандарт, что и Claude Code. Раньше Cursor получал только правила и хуки; теперь набор скиллов в обоих харнессах одинаковый.
+- **Skill `self-learning`** — фиксирует найденный за сессию рабочий маршрут (и отсечённые тупики) как переиспользуемый скилл, чтобы следующая сессия не искала заново.
+- **Skill `ux-core`** — 105 когнитивных биасов как обоснование UX-решений. Композится с визуальными скиллами: даёт «почему», а не «как выглядит».
+- **Skill `emil-design-eng`** — UI-полировка и решение «нужна ли здесь анимация».
+- **Skill `prompt-library`** — 50 шаблонов промптов по фазам SDLC. Вызывается явно (`/prompt-library`). Шесть приёмов формулировки задачи из этой библиотеки вынесены в `global-standards.md` и действуют всегда.
+- **Routing-таблица дизайн-скиллов** в `CLAUDE.md` — какой скилл под какую задачу, чтобы агент не тянул несколько пересекающихся сразу.
+- **Ревизия скиллов** (`CLAUDE.md`) — обратная процедура к `self-learning`, который умеет только добавлять. При ≥15 скиллах или раз в квартал: жив ли маршрут, срабатывал ли скилл, с кем пересекается, нужен ли автовызов. Протухший скилл хуже отсутствия скилла — следующая сессия ему поверит.
+- **`--with-tools`: `dcg`** ([destructive_command_guard](https://github.com/Dicklesworthstone/destructive_command_guard), MIT) — блокирует `rm -rf` / `reset --hard` / force push / `DROP TABLE` до запуска. Хард-enforcement поверх NEVER-list; границы относительно kit-хуков описаны в `global-standards.md`.
+- **`--with-tools`: `claude-video`** — `/watch`: анализ видео (YouTube / TikTok / локальные файлы). Без родных субтитров аудио уходит на внешний Whisper API — отключается флагом `--no-whisper`.
+
+### Removed
+
+> **Breaking:** при обновлении эти скиллы исчезнут. Если какой-то используется — скопируйте его до апдейта.
+
+- **15 скиллов** после ревизии реального использования:
+  - Написаны под другие харнессы, в Claude Code / Cursor не работают по назначению: `gpt-taste`, `image-to-code`, `stitch-design-taste`.
+  - `design-taste-frontend-v1` (legacy-совместимость без legacy), `full-output-enforcement` (актуальные модели вывод не обрезают).
+  - Image-gen: `imagegen-frontend-web`, `imagegen-frontend-mobile`, `brandkit`.
+  - Motion-heavy: `apple-design`, `animation-vocabulary`, `improve-animations`, `review-animations`. Из этой коллекции остался `emil-design-eng`.
+  - Дизайн-гейты `anti-template`, `benchmark`, `innovation-review` — их покрывает агент `design-critic`, причём в отдельном контексте. Скоринг до/после остаётся за `before-after-reviewer`.
+- **Skill `animation-emil-kowalski`** — заменён на `emil-design-eng`.
+- **Правила `self-learning.mdc`, `ux-core.mdc`, `prompt-library.mdc`** — дубликаты одноимённых скиллов, писались когда Cursor скиллов не умел. Правило с `alwaysApply: true` платит контекстом в каждом промпте; скилл грузится лениво.
+
+### Security
+
+- **Удалён хук `rtk-suggest.sh`.** Он отдавал `permissionDecision: "allow"` — только чтобы показать подсказку. В Claude Code это обход системы разрешений: команды из его таблицы (`curl`, `wget`, `docker`, `kubectl`, `find`) молча автоодобрялись. В `settings-template.json` он не входил, то есть при установке через `install.sh` не доставлялся — затронуты только те, кто копировал `.claude/settings.json` из репозитория напрямую.
+
+### Fixed
+
+- **RTK: `/rtk off` не переживал рестарт сессии.** `SessionStart` принудительно возвращает RTK в `on` — поведение осознанное, но нигде не описанное. Теперь задокументировано (README, `.cursor/AGENTS.md`), включая то, что флаг общий для двух харнессов: выключенный в Cursor RTK включится обратно после старта сессии Claude Code.
+- Документация приведена в соответствие с кодом: описание вызова RTK-хука, таблица скиллов Cursor, версия в README.
+
+---
+
 ## [0.3.0] — 2026-07-06
 
 ### Added
