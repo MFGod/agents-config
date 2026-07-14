@@ -42,7 +42,7 @@ jobs:
 
       - name: JSON valid
         run: |
-          for f in .mcp.json .cursor/mcp.json .claude/settings.json .claude/settings-template.json .cursor/hooks.json skills-lock.json; do
+          for f in .mcp.json .cursor/mcp.json .claude/settings-template.json .cursor/hooks.json skills-lock.json; do
             node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
           done
 
