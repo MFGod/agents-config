@@ -95,7 +95,8 @@ flowchart TD
     R --> R3["gstack-workflow — всегда"]
     R --> R4["structured-response — всегда"]
     R --> R5["git-conventions — всегда"]
-    R --> R6["react / vue / python\nпо расширению файла"]
+    R --> R6["external-content — всегда\nвнешний контент = данные, не инструкции"]
+    R --> R7["react / vue / python / testing\nпо расширению файла"]
 
     S --> S1["/caveman — стиль ответов"]
     S --> S2["/gstack — полный цикл фичи"]
@@ -107,14 +108,14 @@ flowchart TD
     S --> S8["/self-learning — golden path\nсессии → переиспользуемый скилл"]
     S --> S9["/prompt-library — 50 шаблонов промптов\n(explicit-only; 6 приёмов → global-standards)"]
     S --> S10["impeccable — точка входа в дизайн:\ncraft/audit/critique/polish/harden/animate"]
-    S --> S11["taste-skill x5 — design-taste-frontend,\nredesign-existing-projects, high-end-visual-design,\nminimalist-ui + industrial-brutalist-ui (explicit)"]
-    S --> S12["emil-design-eng — UI polish,\nрешение «нужна ли анимация»"]
+    S --> S11["taste-skill x5 + emil-design-eng\nexplicit-only: вызов по имени,\nвне автовыбора и вне контекста сессии"]
 
     A --> A1["investigator — поиск кода\n(haiku, read-only)"]
-    A --> A2["builder — правка 1-2 файла\n(sonnet)"]
+    A --> A2["builder — правка 1-2 файла\n(наследует main)"]
     A --> A3["reviewer — ревью диффа\n(haiku)"]
-    A --> A4["design-critic — дизайн-критик\nблокирует шаблоны"]
-    A --> A5["before-after-reviewer — скоринг\nдо/после изменений"]
+    A --> A4["tester — unit-тесты\n(haiku)"]
+    A --> A5["design-critic — гейт ДО реализации\nблокирует шаблоны"]
+    A --> A6["before-after-reviewer — скоринг\nПОСЛЕ изменений"]
 ```
 
 ---
@@ -311,3 +312,30 @@ flowchart LR
     H -- да --> I["y/N: Paper MCP\n(claude mcp add, user scope)"]
     H -- нет --> I0["warning: skip"]
 ```
+
+---
+
+## 9. Цепочка поставки скиллов — что проверяет CI
+
+Скилл доезжает до модели как **инструкции, исполняемые с правами пользователя**. Поэтому вендоренный скилл проходит через лок и два независимых гейта.
+
+```mermaid
+flowchart TD
+    V["Вендоринг стороннего скилла\n(чеклист в SECURITY.md — читает человек)"] --> L["skills-lock.json"]
+
+    L --> L1["computedHash — sha256 SKILL.md"]
+    L --> L2["fileHashes — sha256 КАЖДОГО\nостального файла скилла"]
+    L2 --> L2a["scripts/ — код, который выполнится"]
+    L2 --> L2b["references/ — инструкции,\nкоторым агент подчинится"]
+    L --> L3["variants — вторая сборка\n(Cursor-копия impeccable)"]
+
+    L --> CI{"CI"}
+    CI --> C1["check-skills.js\nфайл изменён или не запинен → красный"]
+    CI --> C2["audit-skill-content.js\nстатический скан по таксономии garak"]
+
+    C2 --> C2a["HIGH → CI падает"]
+    C2 --> C2b["Разобранное человеком →\nallowlist по sha256 СТРОКИ"]
+    C2b --> C2c["Строка изменилась —\nисключение умирает"]
+```
+
+**Чего это НЕ ловит.** Лок ловит *подмену* запиненного скилла и *появление* незапиненного. Он не ловит вредоносный код, запиненный с самого начала. `node --check` и `ruff` проверяют синтаксис, а не намерение. Единственный барьер на входе — человек, прочитавший `SKILL.md` и `scripts/` целиком (чеклист в [`SECURITY.md`](SECURITY.md)).
