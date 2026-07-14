@@ -1,59 +1,17 @@
 {
   "version": 1,
   "skills": {
-    "brandkit": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/brandkit/SKILL.md",
-      "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
-    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "6d838b246d0e35d0b53f4f23f98ba7a1dd561937e64f7d0c7553b0928e376c3e"
     },
-    "design-taste-frontend-v1": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/taste-skill-v1/SKILL.md",
-      "computedHash": "d704ab912c4d0ca954ffa858983da755ae4cd5cad9ba22554db5557382f5bd34"
-    },
-    "full-output-enforcement": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/output-skill/SKILL.md",
-      "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
-    },
-    "gpt-taste": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/gpt-tasteskill/SKILL.md",
-      "computedHash": "cc8f0c601d8240a124e1d11634351a2be7b8a72fd807c75e5b6bf7afcd5ddee0"
-    },
     "high-end-visual-design": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/soft-skill/SKILL.md",
       "computedHash": "7db385e4c5370e5a7fca9704a1361b056e4504ea6a03924bb86f33a4f00b5c73"
-    },
-    "image-to-code": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/image-to-code-skill/SKILL.md",
-      "computedHash": "58517b03b2a01f4c9ba65861559d03df931400871bbc200978c975b24bb92c73"
-    },
-    "imagegen-frontend-mobile": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/imagegen-frontend-mobile/SKILL.md",
-      "computedHash": "9ab7f4f6ce66a3cff02bbf5894e5bd5af50bf5d6ef0adffdc88e8fab772fe44f"
-    },
-    "imagegen-frontend-web": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/imagegen-frontend-web/SKILL.md",
-      "computedHash": "65f5ae59fa317567809438310b1c54f78cd133426deb43e4d3d4ca4c8f541628"
     },
     "industrial-brutalist-ui": {
       "source": "Leonxlnx/taste-skill",
@@ -73,11 +31,39 @@
       "skillPath": "skills/redesign-skill/SKILL.md",
       "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
     },
-    "stitch-design-taste": {
-      "source": "Leonxlnx/taste-skill",
+    "self-learning": {
+      "source": "Kulaxyz/self-learning-skills",
       "sourceType": "github",
-      "skillPath": "skills/stitch-skill/SKILL.md",
-      "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
+      "skillPath": "skills/self-learning/SKILL.md",
+      "computedHash": "451e9723e3df82fb61a2897de935fb6ae66695e9f92041e9e2cdbb06d1ba72a7",
+      "note": "Kit-модификация: (1) добавлен шаг 7 (prune on contradiction — протухший golden path удаляется, а не остаётся вводить в заблуждение) и gotcha про рост без прореживания; апстрим умеет только создавать и обновлять скиллы, процедура ревизии — в CLAUDE.md / .cursor/AGENTS.md. (2) пути скиллов приведены к харнессам кита — Claude Code (.claude/skills) и Cursor (.cursor/skills); апстрим называл директории неподдерживаемых харнессов, и агент искал бы и писал скиллы туда, где их в проекте нет."
+    },
+    "prompt-library": {
+      "source": "anthropic/code.claude.com/docs/en/prompt-library",
+      "sourceType": "web",
+      "skillPath": "skills/prompt-library/SKILL.md",
+      "computedHash": "2930413a1b28f02045f29ed6ef814d0a2c1b4d1f6b7471e28d41782b43102e73",
+      "note": "Kit-модификация: скилл переведён в explicit-only (disable-model-invocation), 6 приёмов формулировки вынесены в global-standards.md. Шаблоны в references/prompts.md — как в апстриме (50 шт)."
+    },
+    "ux-core": {
+      "source": "keepsimple.io/uxcore",
+      "sourceType": "web",
+      "skillPath": "skills/ux-core/SKILL.md",
+      "computedHash": "a6c090edc7beb5ba551da2e577417926db132235bf1ef53537518da8591aa222",
+      "note": "Kit-модификация: в description список composes-with приведён к реально установленным скиллам (упоминался вырезанный apple-design)."
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "433b5a239cda18e0576e4e558532e7e53512e21fafe5b85db4894c28ec399b72"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "npm",
+      "skillPath": ".claude/skills/impeccable/SKILL.md",
+      "computedHash": "45f6b15090b7ebabbc8c54eb923a196705830156ccc84eec6365ef9b20b154a2",
+      "note": "npx impeccable генерирует harness-специфичную сборку (пути, /impeccable vs $impeccable, allowed-tools). Вендорится только Claude Code-вариант — он и лежит в .claude/skills/, а не в .agents/skills/ как остальные. Хеш — от локальной сборки, upstream-файла с этим содержимым нет."
     }
   }
 }
