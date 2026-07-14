@@ -7,8 +7,13 @@ __pycache__/
 venv/
 
 
-.cursor/secrets/github_token
-.claude/secrets/github_token
+# Секреты. Паттерны, а не конкретные пути: SECURITY.md опирается на то, что секрет
+# физически не может попасть в репозиторий, и раньше это утверждение было ложным —
+# закрыты были только два файла github_token, а любой .env коммитился свободно.
+secrets/
+.env
+.env.*
+*.env
 
 # Runtime state 
 .cursor/hooks/state/

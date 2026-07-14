@@ -1,7 +1,23 @@
 {
   "effortLevel": "high",
   "language": "russian",
-  "permissions": {},
+  "permissions": {
+    "deny": [
+      "mcp__playwright__browser_run_code_unsafe",
+      "mcp__playwright__browser_file_upload",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/secrets/**)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)"
+    ],
+    "ask": [
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_navigate"
+    ]
+  },
   "theme": "dark-ansi",
   "enableAllProjectMcpServers": true,
   "hooks": {
