@@ -1,6 +1,7 @@
 ---
 name: emil-design-eng
-description: This skill encodes Emil Kowalski's philosophy on UI polish, component design, animation decisions, and the invisible details that make software feel great.
+description: This skill encodes Emil Kowalski's philosophy on UI polish, component design, animation decisions, and the invisible details that make software feel great. Explicit-invoke only — overlaps `impeccable polish`/`animate`, so the choice must be the user's.
+disable-model-invocation: true
 ---
 
 # Design Engineering
