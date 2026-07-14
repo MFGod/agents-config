@@ -27,8 +27,8 @@ usage() {
   printf "  --stacks, -s LIST стек-правила через запятую: react,vue,fastapi,django,all,none\n"
   printf "  --caveman         установить Cursor caveman mode (cursor-caveman.mdc, alwaysApply)\n"
   printf "  --with-tools      предложить установку внешних тулов (skillspector, agent-reach,\n"
-  printf "                    codebase-memory-mcp, paper mcp) — сторонний код с GitHub,\n"
-  printf "                    каждый со своим y/N подтверждением\n"
+  printf "                    codebase-memory-mcp, paper mcp, claude-video /watch, dcg) — сторонний\n"
+  printf "                    код с GitHub, каждый со своим y/N подтверждением\n"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -213,7 +213,9 @@ semver_compare() {
     echo unknown; return
   fi
   local IFS='.' i
-  local -a a=($v1) b=($v2)
+  local -a a b
+  read -ra a <<< "$v1"
+  read -ra b <<< "$v2"
   for i in 0 1 2; do
     local x=${a[$i]:-0} y=${b[$i]:-0}
     x=${x%%[^0-9]*}; y=${y%%[^0-9]*}
@@ -347,13 +349,17 @@ install_claude_core() {
   copy_dir "$SCRIPT_DIR/.claude/hooks"  "$TARGET/.claude/hooks" "hooks.json"
   copy_dir "$SCRIPT_DIR/.claude/agents" "$TARGET/.claude/agents"
 
-  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max innovation-review benchmark anti-template impeccable animation-emil-kowalski; do
+  # impeccable живёт прямо здесь, без symlink в .agents/: npx impeccable генерирует
+  # harness-специфичную сборку, одним файлом два харнесса не обслужить.
+  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max impeccable; do
     copy_dir "$SCRIPT_DIR/.claude/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 
-  # taste-skill (leonxlnx): real source lives in .agents/skills/ — .claude/skills/
-  # holds a symlink there for local dev. Target gets a plain copy, no symlink.
-  for skill in brandkit design-taste-frontend design-taste-frontend-v1 full-output-enforcement gpt-taste high-end-visual-design image-to-code imagegen-frontend-mobile imagegen-frontend-web industrial-brutalist-ui minimalist-ui redesign-existing-projects stitch-design-taste; do
+  # External skills vendored into .agents/skills/ — .claude/skills/ holds a symlink
+  # there for local dev. Target gets a plain copy, no symlink.
+  # taste-skill (leonxlnx), self-learning (Kulaxyz), prompt-library (Anthropic),
+  # ux-core (keepsimple.io), emil-design-eng (emilkowalski/skills).
+  for skill in design-taste-frontend emil-design-eng high-end-visual-design industrial-brutalist-ui minimalist-ui prompt-library redesign-existing-projects self-learning ux-core; do
     copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 
@@ -412,6 +418,18 @@ install_cursor_core() {
     copy_file_safe "$SCRIPT_DIR/.cursor/rules/cursor-caveman.mdc" "$TARGET/.cursor/rules/cursor-caveman.mdc"
 
   copy_stack_rules "$SCRIPT_DIR/.cursor/rules" "$TARGET/.cursor/rules" mdc
+
+  # Cursor 2.4+ читает Agent Skills из .cursor/skills/ (тот же SKILL.md-стандарт, что
+  # и Claude Code: автовыбор по description, disable-model-invocation, paths-глобы).
+  # Паритет с Claude Code: тот же набор скиллов, тот же источник .agents/skills/.
+  # impeccable — harness-специфичная сборка, поэтому берётся из .cursor/skills/.
+  for skill in design-taste-frontend emil-design-eng high-end-visual-design industrial-brutalist-ui \
+               minimalist-ui prompt-library redesign-existing-projects self-learning ux-core; do
+    copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.cursor/skills/$skill"
+  done
+  # ui-ux-pro-max — kit-owned и harness-agnostic; impeccable — harness-специфичная сборка.
+  copy_dir "$SCRIPT_DIR/.claude/skills/ui-ux-pro-max" "$TARGET/.cursor/skills/ui-ux-pro-max"
+  copy_dir "$SCRIPT_DIR/.cursor/skills/impeccable" "$TARGET/.cursor/skills/impeccable"
 
   copy_file_safe "$SCRIPT_DIR/.cursor/kit-version" "$TARGET/.cursor/kit-version"
   [[ -f "$SCRIPT_DIR/.cursor/AGENTS.md" ]] && \
@@ -480,6 +498,41 @@ install_external_tools() {
     fi
   else
     printf "  %b!%b claude CLI не найден — paper MCP пропущен\n" "$YELLOW" "$RESET"
+  fi
+
+  # claude-video /watch (bradautomates): даёт агенту «смотреть» видео — кадры +
+  # транскрипт в мультимодальный контекст. ВНЕ default-установки: тяжёлые deps
+  # (ffmpeg/yt-dlp тянутся при первом /watch через setup.py) и внешний egress
+  # (audio → Groq/OpenAI Whisper, когда нет native captions; --no-whisper отключает).
+  if command -v npx &>/dev/null; then
+    printf "  %bclaude-video /watch%b — видео-анализ (YouTube/TikTok/локальные).\n" "$BOLD" "$RESET"
+    printf "  Требует: ffmpeg, yt-dlp (auto-install при первом /watch). Egress: Whisper API без captions.\n"
+    if ask "Установить claude-video /watch глобально (npx skills add ... -g)? [y/N]: "; then
+      npx --yes skills add bradautomates/claude-video -g \
+        && printf "  %bустановлен%b: claude-video /watch (запуск: /watch <url>)\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b claude-video: установка не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b npx не найден — claude-video пропущен (install Node, or /plugin install watch@claude-video in Claude Code)\n" "$YELLOW" "$RESET"
+  fi
+
+  # dcg / destructive_command_guard (Dicklesworthstone): PreToolUse-хук, перехватывает
+  # деструктивные shell/git команды (rm -rf, reset --hard, force push, DROP TABLE,
+  # terraform destroy, k8s/docker prune) ДО запуска — хард-enforcement поверх kit
+  # NEVER-list (global-standards.md / git-conventions.md). Rust-бинарник (MIT),
+  # macOS/Linux/Windows. Пишет PreToolUse Bash-matcher в ~/.claude/settings.json
+  # (user-global — защита через все проекты). Core fs+git packs on by default.
+  if command -v curl &>/dev/null; then
+    printf "  %bdcg%b — destructive command guard: блокирует rm -rf / reset --hard / force\n" "$BOLD" "$RESET"
+    printf "  push / DROP TABLE до запуска. Хард-enforcement для kit NEVER-list. MIT, Apple Silicon ✓.\n"
+    if ask "Установить dcg глобально (curl install.sh --easy-mode → ~/.claude/settings.json)? [y/N]: "; then
+      curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/destructive_command_guard/main/install.sh?$(date +%s)" \
+        | bash -s -- --easy-mode \
+        && printf "  %bустановлен%b: dcg (PreToolUse guard активен глобально)\n" "$GREEN" "$RESET" \
+        || printf "  %b!%b dcg: установка не удалась\n" "$YELLOW" "$RESET"
+    fi
+  else
+    printf "  %b!%b curl не найден — dcg пропущен\n" "$YELLOW" "$RESET"
   fi
 }
 

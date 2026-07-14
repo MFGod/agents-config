@@ -16,7 +16,7 @@
 ├── hooks/                 # Runtime-хуки жизненного цикла
 │   ├── session-activate.js      # SessionStart: активация caveman + headroom + rtk (unified)
 │   ├── mode-tracker.js          # UserPromptSubmit: трекинг caveman + rtk + headroom + /caveman-stats (unified)
-│   ├── rtk-rewrite.sh           # PreToolUse: перехват Bash-команд → rtk hook claude
+│   ├── rtk-rewrite.sh           # PreToolUse: перехват Bash-команд → rtk rewrite
 │   ├── post-edit-check.js       # PostToolUse: синтаксическая проверка после Edit/Write
 │   ├── caveman-config.js        # Shared util: резолв режима, флаг-файл (source of truth; .cursor/hooks/ → симлинк)
 │   ├── caveman-stats.js         # Статистика токенов сессии
@@ -44,7 +44,7 @@
 | `hooks.SessionStart` | `session-activate.js` | Активирует caveman + headroom + RTK при старте сессии |
 | `hooks.UserPromptSubmit` | `mode-tracker.js` | Трекает все режимы (caveman/rtk/headroom) + /caveman-stats на каждый промпт |
 | `hooks.PreToolUse` | `safety-guard.js` | Блокирует `DROP TABLE/DATABASE` и `git push --force` на protected branches |
-| `hooks.PreToolUse` | `rtk-rewrite.sh` | Перехватывает Bash-команды, переписывает через `rtk hook claude` (timeout 10s) |
+| `hooks.PreToolUse` | `rtk-rewrite.sh` | Перехватывает Bash-команды, переписывает через `rtk rewrite` (timeout 10s) |
 | `statusLine` | `caveman-statusline.sh` | Показывает `[CAVEMAN]` badge в строке состояния терминала |
 
 SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToolUse (rtk-rewrite.sh) — **10 секунд**.
@@ -77,7 +77,7 @@ SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToo
 
 1. Отказывает при symlink-флаге (защита)
 2. Читает `~/.claude/.rtk-active` (первые 8 байт)
-3. `on` → `exec rtk hook claude` (переписывает stdin с командой)
+3. `on` → `rtk rewrite` (переписывает stdin с командой)
 4. Всё остальное → `exit 0` (команда проходит без изменений)
 
 Требует бинарь `rtk` в `$PATH`.
@@ -101,7 +101,7 @@ SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToo
 
 | Инструмент | Репозиторий | Что делает | Как интегрирован |
 |-----------|-------------|-----------|-----------------|
-| **RTK** | [rtk-ai/rtk](https://github.com/rtk-ai/rtk) | Сжимает Bash-output (git, ls, тесты) | `rtk hook claude` в PreToolUse через `rtk-rewrite.sh` |
+| **RTK** | [rtk-ai/rtk](https://github.com/rtk-ai/rtk) | Сжимает Bash-output (git, ls, тесты) | `rtk rewrite` в PreToolUse через `rtk-rewrite.sh` |
 
 > **RTK и `rtk init -g`:** не запускай `rtk init -g` поверх этой конфигурации. Официальный установщик удалит `rtk-rewrite.sh` и перепишет `settings.json`, конфликтуя с toggle-механизмом (`/rtk on`/`off`). Если нужна чистая RTK-инсталляция — сначала удали интеграцию из `settings.json` вручную.
 | **Caveman** | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | Сжимает output модели ~75% | SessionStart (`session-activate.js`) + UserPromptSubmit (`mode-tracker.js`) |

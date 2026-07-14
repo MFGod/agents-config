@@ -53,13 +53,17 @@ test('rtk: flag ON → outputs RTK ACTIVE', () => {
   } finally { cleanup(dir); }
 });
 
-test('rtk: flag OFF → no RTK ACTIVE in output', () => {
+// RTK — always-on by design: SessionStart перезаписывает флаг в 'on', игнорируя
+// предыдущее значение. /rtk off действует до конца сессии, не переживает рестарт.
+// Отличается от headroom, который уважает выключенный флаг между сессиями.
+test('rtk: flag OFF → forced back ON at session start', () => {
   const dir = mktemp();
   try {
     fs.writeFileSync(path.join(dir, '.rtk-active'), 'off', { mode: 0o600 });
     const res = runHook(SESSION_HOOK, { claudeDir: dir });
     assert.strictEqual(res.status, 0);
-    assert.ok(!res.stdout.includes('RTK ACTIVE'), `expected no RTK ACTIVE, got: ${res.stdout}`);
+    assert.ok(res.stdout.includes('RTK ACTIVE'), `expected RTK ACTIVE (forced on), got: ${res.stdout}`);
+    assert.strictEqual(fs.readFileSync(path.join(dir, '.rtk-active'), 'utf8'), 'on');
   } finally { cleanup(dir); }
 });
 

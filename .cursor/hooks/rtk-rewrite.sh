@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# RTK preToolUse hook for Cursor — reads .rtk-active flag, delegates to rtk hook cursor.
-# on  → rewrite Shell command via rtk hook cursor (returns updated_input)
+# RTK preToolUse hook for Cursor — reads .rtk-active flag, delegates to `rtk hook cursor`.
+# on  → rewrite Shell command via `rtk hook cursor` (rtk emits Cursor's updated_input itself)
 # off → pass through (exit 0, no output)
-# SYNC: keep logic in sync with .claude/hooks/rtk-rewrite.sh (differs only in "rtk hook claude")
+#
+# NOT a mirror of .claude/hooks/rtk-rewrite.sh — the two intentionally differ:
+#   Cursor: exec `rtk hook cursor`, which owns the whole protocol (parse → rewrite → respond).
+#   Claude: calls `rtk rewrite` for the mapping only, then builds the PreToolUse JSON
+#           (updatedInput / permissionDecision) itself, plus heredoc skip and audit logging.
+# Keep the FLAG semantics in sync (same .rtk-active file, same on/off contract); the
+# transport differs by harness.
 
 RTK_FLAG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.rtk-active"
 
