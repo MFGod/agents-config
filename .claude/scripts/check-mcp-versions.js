@@ -38,8 +38,10 @@ function checkNpm(raw) {
 }
 
 // PyPI JSON API: https://pypi.org/pypi/<pkg>/<ver>/json → 200 if exists.
+// Extras (PEP 508: `headroom-ai[mcp]==0.26.0`) are part of the requirement, not of
+// the distribution name — PyPI 404s on them. Strip before querying.
 function checkPypi(raw) {
-  const match = raw.match(/^([A-Za-z0-9_\-\[\]]+)==(.+)$/);
+  const match = raw.match(/^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==(.+)$/);
   if (!match) return true; // no version pinned, skip
   const [, pkg, ver] = match;
   const url = `https://pypi.org/pypi/${encodeURIComponent(pkg)}/${encodeURIComponent(ver)}/json`;

@@ -37,11 +37,13 @@ jobs:
           done
 
       - name: Python compile
-        run: python3 -m py_compile .claude/skills/caveman-compress/scripts/*.py
+        run: |
+          python3 -m py_compile .claude/skills/caveman-compress/scripts/*.py
+          python3 -m py_compile .claude/skills/ui-ux-pro-max/scripts/*.py
 
       - name: JSON valid
         run: |
-          for f in .mcp.json .cursor/mcp.json .claude/settings-template.json .cursor/hooks.json; do
+          for f in .mcp.json .cursor/mcp.json .claude/settings.json .claude/settings-template.json .cursor/hooks.json skills-lock.json; do
             node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
           done
 
@@ -62,9 +64,23 @@ jobs:
       - name: cursor-rules sync check (.claude/rules vs .cursor/rules)
         run: node .claude/scripts/check-cursor-sync.js
 
+      - name: Skills check (frontmatter, skills-lock, install.sh, symlinks)
+        run: node .claude/scripts/check-skills.js
+
       - name: Install smoke test
         run: |
           mkdir -p /tmp/kit-target
           bash install.sh /tmp/kit-target --yes --stacks all
           test -f /tmp/kit-target/.claude/hooks/safety-guard.js
           test -f /tmp/kit-target/.cursor/hooks/safety-guard.js
+          # Skills must land in BOTH harnesses — Cursor shipped without any for
+          # several releases because nothing asserted this.
+          test -f /tmp/kit-target/.claude/skills/impeccable/SKILL.md
+          test -f /tmp/kit-target/.claude/skills/ux-core/SKILL.md
+          test -f /tmp/kit-target/.cursor/skills/impeccable/SKILL.md
+          test -f /tmp/kit-target/.cursor/skills/ux-core/SKILL.md
+          # Rules must land too.
+          test -f /tmp/kit-target/.claude/rules/global-standards.md
+          test -f /tmp/kit-target/.cursor/rules/global-standards.mdc
+          # No skill may install as a symlink into a user's project.
+          ! find /tmp/kit-target/.claude/skills /tmp/kit-target/.cursor/skills -type l | grep -q .
