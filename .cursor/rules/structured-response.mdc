@@ -1,63 +1,57 @@
 ---
-description: Структурированный ответ (ANALYSIS/PLAN/…) для рефакторинга, новой фичи, архитектуры, ревью PR, миграций и нетривиальных изменений логики. Не использовать для мелких правок, поиска по коду, вопросов без изменений, однострочных фиксов.
+description: Structured response (ANALYSIS/PLAN/…) for refactoring, new features, architecture, PR review, migrations, and non-trivial logic changes. Not for small edits, code search, questions without changes, or one-line fixes.
 alwaysApply: true
 ---
 <!-- SYNC: .claude/rules/structured-response.md -->
 
----
-description: Структурированный ответ (ANALYSIS/PLAN/…) для рефакторинга, новой фичи, архитектуры, ревью PR, миграций и нетривиальных изменений логики. Не использовать для мелких правок, поиска по коду, вопросов без изменений, однострочных фиксов.
----
+# Structured Response Format
 
-<!-- SYNC: .cursor/rules/structured-response.mdc -->
+## When to apply
 
-# Структурированный формат ответа
+The task is non-trivial (see `global-standards.md`) and at least one holds:
+- ≥3 files with logic
+- new domain logic / changes a public API or contract
+- refactoring with regression risk (layers, migrations, types)
+- the user explicitly asks for analysis
 
-## Когда применять
+Simple request → a short answer **without** the sections below.
 
-Задача нетривиальная (см. `global-standards.md`), хоть одно верно:
-- ≥3 файлов с логикой
-- новая доменная логика / меняет публичный API/контракт
-- рефакторинг с риском регрессии (слои, миграции, типы)
-- пользователь явно просит анализ
+## Format
 
-Простой запрос → короткий ответ **без** секций ниже.
-
-## Формат
-
-Только непустые секции. Глубина: 3–7 bullets; `PLAN` — нумер. шаги.
+Non-empty sections only. Depth: 3–7 bullets; `PLAN` — numbered steps.
 
 ```
 ANALYSIS:
-- Что делает текущий код и почему это проблема / чего не хватает.
-- Зависимости, слои, компоненты, которые затронет изменение.
-- Ограничения и допущения.
+- What the current code does and why that is a problem / what is missing.
+- Dependencies, layers, components the change will touch.
+- Constraints and assumptions.
 
 PLAN:
-1. Шаг первый (файл, что меняем, почему).
-2. Шаг второй.
+1. First step (file, what changes, why).
+2. Second step.
 ...
 
 IMPLEMENTATION:
-- Ключевые решения, паттерны, контракты, которые выбраны.
-- Что НЕ меняется и почему.
+- Key decisions, patterns, contracts chosen.
+- What is NOT changing, and why.
 
 CLEAN CODE CHECK:
-- Нет лишних абстракций (функция/файл — при ≥2 использованиях)?
-- Нейминг intention-revealing?
-- Нет смешения слоёв?
+- No superfluous abstractions (a function/file earns its place at ≥2 uses)?
+- Intention-revealing naming?
+- No mixing of layers?
 
 RISKS:
-- Возможные регрессии и где проверить.
-- Edge cases, которые могут сломаться.
+- Possible regressions and where to check them.
+- Edge cases that could break.
 
 TEST PLAN:
-- Unit: что мокировать, что проверять.
-- Integration: что запустить.
+- Unit: what to mock, what to assert.
+- Integration: what to run.
 
 CODE:
-<патч или фрагмент — только если нужен для согласования>
+<patch or fragment — only if needed to agree on the approach>
 
 REVIEW NOTES:
-- На что обратить внимание при ревью.
-- Что отложено на следующий PR.
+- What to look at during review.
+- What is deferred to the next PR.
 ```

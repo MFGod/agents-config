@@ -10,77 +10,77 @@ paths:
 
 <!-- SYNC: .cursor/rules/react-standards.mdc -->
 
-# React-стандарты
+# React Standards
 
-Эталон: React 18 TWA/VK Mini App (TypeScript strict, MobX, Webpack).
-Дополняет `global-standards.md`. Для Vue — `vue-standards.md`.
+Reference implementation: React 18 TWA/VK Mini App (TypeScript strict, MobX, Webpack).
+Extends `global-standards.md`. For Vue — see `vue-standards.md`.
 
-**Стек:** React 18, TypeScript strict, MobX 6 + mobx-react, Webpack, React Router 6, axios / `@kts-front/call-api`, Sentry, SCSS modules / styled-components.
+**Stack:** React 18, TypeScript strict, MobX 6 + mobx-react, Webpack, React Router 6, axios / `@kts-front/call-api`, Sentry, SCSS modules / styled-components.
 
-## Структура `src/`
+## `src/` structure
 
 `main.tsx` (entry) · `vk/App.tsx, tg/App.tsx` (multi-platform) · `pages/` · `components/common/ layout/ modals/` · `store/globals/` (RootStore, ApiStore, BasePageStore) · `store/locals/` (page stores) · `store/models/` · `store/hooks/` · `entities/` · `config/` · `utils/` (lazyWithRetry, performance, defer).
 
 ## MobX
 
 - `RootStore` — composition root; page stores `extends BasePageStore` (`store/globals/BasePageStore`).
-- Компоненты, читающие store, — `observer()` из `mobx-react`.
-- Бизнес-логика и API — в stores, не в JSX.
-- Derived UI state — `React.useMemo`, не дублируй store state.
+- Components that read a store must be wrapped in `observer()` from `mobx-react`.
+- Business logic and API calls live in stores, not in JSX.
+- Derived UI state — `React.useMemo`; do not duplicate store state.
 
-## Компоненты
+## Components
 
-- `React.FC<Props>` с явным типом. Один компонент на файл (`react/no-multi-comp`).
-- Презентационные — без store. Connected — `observer` + `use*Store`.
-- `clsx` для условных классов. `lazyWithRetry` + `React.Suspense` для тяжёлых страниц.
+- `React.FC<Props>` with an explicit type. One component per file (`react/no-multi-comp`).
+- Presentational components take no store. Connected ones use `observer` + `use*Store`.
+- `clsx` for conditional classes. `lazyWithRetry` + `React.Suspense` for heavy pages.
 
-## Стили (выбор фиксируется на уровне проекта)
+## Styling (the choice is fixed per project)
 
-По умолчанию `ComponentName.module.scss`. Если проект на styled-components — `*.styles.ts`. Не смешивать в одном компоненте.
+Default is `ComponentName.module.scss`. If the project uses styled-components — `*.styles.ts`. Never mix the two in one component.
 
 ## API
 
-- HTTP через `ApiStore`: `baseUrl` из config, Bearer в `getAuthorizationCallback`.
-- Ошибки — типизированные `ErrorResponse`, обработка в store, UI отображает state.
-- Не вызывать axios/fetch напрямую из компонентов.
+- HTTP goes through `ApiStore`: `baseUrl` from config, Bearer token in `getAuthorizationCallback`.
+- Errors are typed `ErrorResponse`, handled in the store; the UI renders state.
+- Never call axios/fetch directly from a component.
 
 ## Multi-platform (TWA / VK)
 
-Отдельные `App.tsx` на платформу; `init(platform, App)` в `main.tsx`. Platform-ветки в shared components — только через `appParamsStore` (`store/globals/AppParamsStore`).
+A separate `App.tsx` per platform; `init(platform, App)` in `main.tsx`. Platform branching inside shared components goes only through `appParamsStore` (`store/globals/AppParamsStore`).
 
-## Ошибки и устойчивость
+## Errors and resilience
 
-- Error boundaries: `withErrorBoundary` на критичных деревьях.
-- `ChunkLoadError` — глобальный handler + reload.
-- `appState`: loading/success/error — единый источник; не white screen.
-- HTML из API — только `DOMPurify.sanitize(html)`.
+- Error boundaries: `withErrorBoundary` on critical trees.
+- `ChunkLoadError` — global handler + reload.
+- `appState`: loading/success/error — a single source; never a white screen.
+- HTML from an API — only via `DOMPurify.sanitize(html)`.
 
-## Хуки
+## Hooks
 
-`useEffect` — только sync/subscription/timer/init, не для derived state или бизнес-логики.
-`useCallback` — для handlers в observer-компонентах (предотвращает лишние ре-рендеры).
-Debounce — через `useRef`, не новый таймер в каждом render.
-`eslint-disable exhaustive-deps` — только с комментарием why.
+`useEffect` — for sync/subscription/timer/init only, not for derived state or business logic.
+`useCallback` — for handlers in observer components (prevents needless re-renders).
+Debounce — via `useRef`, not a new timer on every render.
+`eslint-disable exhaustive-deps` — only with a comment explaining why.
 
-## Инструменты
+## Tooling
 
-`yarn tsc:check` перед коммитом; eslint + prettier + stylelint; max-len 100; husky + lint-staged.
+`yarn tsc:check` before committing; eslint + prettier + stylelint; max-len 100; husky + lint-staged.
 
 ## TypeScript
 
-- `unknown` вместо `any` при работе с внешними данными
-- Явные возвращаемые типы у публичных / экспортируемых функций
-- `interface` для публичных контрактов; `type` для unions и aliases
+- `unknown` instead of `any` when handling external data
+- Explicit return types on public / exported functions
+- `interface` for public contracts; `type` for unions and aliases
 
-## Антипаттерны
+## Anti-patterns
 
-- API calls в JSX; `useState` для global state на MobX-проекте; fetch в render.
-- Giant components (>200 строк); игнор chunk errors после deploy.
+- API calls in JSX; `useState` for global state on a MobX project; fetch during render.
+- Giant components (>200 lines); ignoring chunk errors after a deploy.
 
-## Чеклист
+## Checklist
 
 REACT HOOKS CHECK:
-- `useEffect` только sync/sub/timer/init; deps соблюдены; `useCallback` для observer-детей?
+- `useEffect` limited to sync/sub/timer/init; deps honored; `useCallback` for observer children?
 
 MOBX CHECK:
-- Все reader-компоненты в `observer()`; логика в stores; derived state через computed?
+- Every reader component in `observer()`; logic in stores; derived state via computed?

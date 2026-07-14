@@ -1,92 +1,94 @@
 ---
-description: Методология полного цикла разработки фичи (Think→Plan→Build→Review→Test). Подключай при старте новой фичи, проектировании архитектуры, задачах с риском для данных/контрактов или когда пользователь просит "спланируй сначала".
+description: Full feature-cycle methodology (Think→Plan→Build→Review→Test). Engage when starting a new feature, designing architecture, on tasks that risk data/contracts, or when the user asks to "plan first".
 ---
 
 <!-- SYNC: .cursor/rules/gstack-workflow.mdc -->
 
 # gstack Workflow
 
-Когда: фича/модуль ≥3 файлов; архитектурное решение; риск данных/миграций/контрактов; явный запрос полного цикла.
+When: feature/module ≥3 files; architectural decision; risk to data/migrations/contracts; explicit request for the full cycle.
 
-**Не применяй:** фикс ≤2 файлов, поиск, однострочники.
+**Do not apply to:** fixes of ≤2 files, searches, one-liners.
 
 ---
 
-## THINK — до любого плана
+## THINK — before any plan
 
-Письменно, без кода:
+In writing, no code:
 
-- Что значит «готово»? Успех-метрика?
-- Что сломается? Регрессии?
-- Что НЕ в скоупе?
-- Внешние блокеры (API, команда, данные)?
+- What does "done" mean? Success metric?
+- What will break? Regressions?
+- What is NOT in scope?
+- External blockers (API, team, data)?
 
 ### Phase Assessment
 
-Укажи статус каждой фазы в конце THINK:
+State the status of each phase at the end of THINK:
 
-| Фаза | Статус | Причина |
-|------|--------|---------|
-| PLAN | Required / Optional | Required если ≥3 файлов или архитектурные решения |
+| Phase | Status | Reason |
+|-------|--------|--------|
+| PLAN | Required / Optional | Required if ≥3 files or architectural decisions |
 | BUILD | Always Required | — |
-| REVIEW | Required / Skip | Required если риск для данных, контрактов, безопасности |
-| TEST | Required / Skip | Skip только для docs/config; Required при изменении логики |
+| REVIEW | Required / Skip | Required if there is risk to data, contracts, or security |
+| TEST | Required / Skip | Skip only for docs/config; Required when logic changes |
 
-Выход: ответы + таблица фаз. Код — только после PLAN.
+Output: the answers + the phase table. Code only after PLAN.
 
 ---
 
-## PLAN — до сборки
+## PLAN — before building
 
-Формат из `structured-response.md`:
-`ANALYSIS → PLAN (нумерованные шаги: файл + что + почему) → RISKS → TEST PLAN`
+Format from `structured-response.md`:
+`ANALYSIS → PLAN (numbered steps: file + what + why) → RISKS → TEST PLAN`
 
 **FROZEN GATE:**
-Явное ОК пользователя (`"да"`, `"ок"`, `"погнали"`).
-После: архитектура заморожена. В BUILD — никаких изменений контрактов/слоёв/именования без мини-плана.
+An explicit OK from the user (`"да"`, `"ок"`, `"погнали"`).
+After it: the architecture is frozen. During BUILD — no changes to contracts/layers/naming without a mini-plan.
 
 ---
 
-## BUILD — только после FROZEN GATE
+## BUILD — only after the FROZEN GATE
 
-- Один файл/слой целиком, без переключений.
-- **Completeness Principle:** файл/функция закончен до перехода к следующему.
-- Никаких `TODO` / `...` / placeholder без явного `«следующий PR»`.
+- One file/layer end to end, no context switching.
+- **Completeness Principle:** a file/function is finished before moving to the next.
+- No `TODO` / `...` / placeholders without an explicit "next PR".
 
 ### Subagent hooks
 
-- Кодовая база незнакома → spawn Explore subagent для контекста перед написанием.
-- Механические правки (rename, format, mass-replace) → spawn cavecrew-builder.
+- Codebase unfamiliar → spawn an Explore subagent for context before writing.
+- Mechanical edits (rename, format, mass-replace) → spawn cavecrew-builder.
 
 ---
 
-## REVIEW — после BUILD, до TEST
+## REVIEW — after BUILD, before TEST
 
-Чеклист:
+Checklist:
 
-- Layer boundaries не нарушены (стек-правило проекта)?
-- Ошибки явные — нет silent failures?
-- Нет лишних абстракций/зависимостей?
-- Input validated, no secrets in code, HTML из API — через sanitizer?
+- Layer boundaries intact (per the project's stack rule)?
+- Errors explicit — no silent failures?
+- No superfluous abstractions/dependencies?
+- Input validated, no secrets in code, HTML from an API passed through a sanitizer?
 
 ### Automated review
 
-После self-review → spawn cavecrew-reviewer subagent с diff или списком файлов.
+After self-review → spawn the cavecrew-reviewer subagent with the diff or the file list.
 
 ---
 
-## TEST — перед merge
+## TEST — before merge
 
-Следуй `dev-workflow.md`:
-1. Написать/обновить тесты.
-2. Запустить, показать вывод.
-3. Тест нельзя написать — зафиксировать почему.
+Follow `dev-workflow.md`:
+1. Write/update tests.
+2. Run them, show the output.
+3. If a test cannot be written — record why.
 
 ---
 
 ## Loop-back: BUILD → PLAN
 
-Когда: открытие меняет архитектуру, контракты, слои или именование — **PLAN нужно обновить**.
+When: a discovery changes architecture, contracts, layers, or naming — **the PLAN must be updated**.
+
+Emit to the user:
 
 ```
 СТОП. LOOP-BACK: <что открылось>
@@ -94,14 +96,16 @@ description: Методология полного цикла разработк
 Жду ОК.
 ```
 
-После ОК: обнови PLAN (добавь/пометь шаги), продолжай BUILD.
-Не рестартуй с THINK — только re-entry в PLAN.
+After the OK: update the PLAN (add/mark steps), continue BUILD.
+Do not restart from THINK — re-enter at PLAN only.
 
 ---
 
-## Отклонение от плана
+## Deviation from the plan
 
-Когда: тактическое решение на уровне реализации; архитектура PLAN остаётся верной, **PLAN не обновляется**.
+When: a tactical, implementation-level decision; the PLAN's architecture still holds, so **the PLAN is not updated**.
+
+Emit to the user:
 
 ```
 СТОП. Нужно отклонение: <что именно>.
@@ -109,20 +113,20 @@ description: Методология полного цикла разработк
 Продолжаю после подтверждения.
 ```
 
-Не импровизируй. Стоп → мини-план → ОК → продолжай.
+Do not improvise. Stop → mini-plan → OK → continue.
 
 ---
 
 ## State tracking
 
-**Claude Code:** preCompact недоступен — state при компакции теряется. Держи текущую фазу и FROZEN GATE явно в тексте или через `TodoWrite`. JSON-файл ниже не используй.
+**Claude Code:** preCompact is unavailable — state is lost on compaction. Keep the current phase and FROZEN GATE explicit in the text or via `TodoWrite`. Do not use the JSON file below.
 
-**Cursor:** при каждом переходе фазы (THINK→PLAN→BUILD→REVIEW→TEST) и при FROZEN GATE запиши `.cursor/hooks/state/gstack.json`:
+**Cursor:** on every phase transition (THINK→PLAN→BUILD→REVIEW→TEST) and at the FROZEN GATE, write `.cursor/hooks/state/gstack.json`:
 
 ```json
 { "phase": "BUILD", "frozen": true, "modified": ["src/auth.ts", "src/models.py"] }
 ```
 
-Используй shell: `mkdir -p .cursor/hooks/state && echo '...' > .cursor/hooks/state/gstack.json`
+Use the shell: `mkdir -p .cursor/hooks/state && echo '...' > .cursor/hooks/state/gstack.json`
 
-**При завершении сессии (merge, done) — удали файл:** `rm -f .cursor/hooks/state/gstack.json`
+**When the session ends (merge, done) — delete the file:** `rm -f .cursor/hooks/state/gstack.json`

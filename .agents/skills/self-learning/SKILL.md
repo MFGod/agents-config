@@ -1,19 +1,11 @@
 ---
 name: self-learning
 description: >
-  Capture a hard-won "golden path" from the current session as a reusable Agent
-  Skill, so future sessions start already knowing it. Use it (1) right after
-  non-trivial debugging, after working out a multi-step operational workflow, or
-  after rediscovering project facts you didn't know up front — e.g. how to reach
-  the dev/prod database, where credentials and env vars live, how to deploy, run
-  migrations, or verify a change live; and (2) whenever the user says "remember
-  this", "save this as a skill", "make a skill for this", "don't make me
-  re-explain this next time", or otherwise wants a workflow preserved across
-  sessions. Proactively recognize the moment even when unprompted: if a task took
-  several attempts before it worked, used non-obvious tooling, or is likely to
-  recur, harvest it without asking first. Delegates to a subagent when your tool
-  supports one, or works inline, to extract the proven procedure into a new
-  project-local or global skill.
+  Capture a hard-won "golden path" from this session as a reusable Agent Skill, so the
+  next session starts already knowing it. Fires on "remember this" / "save this as a
+  skill", and proactively — without asking — whenever a multi-step procedure (deploy,
+  reach the DB, migrations, live verification) only worked after several attempts or
+  needed non-obvious tooling, and is likely to recur.
 license: MIT
 metadata:
   author: kulaxyz

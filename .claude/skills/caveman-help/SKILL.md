@@ -1,3 +1,13 @@
+---
+name: caveman-help
+description: >
+  Quick-reference card for all caveman modes, skills, and commands.
+  One-shot display, not a persistent mode. Trigger: /caveman-help,
+  "caveman help", "what caveman commands", "how do I use caveman".
+effort: low
+disable-model-invocation: true
+---
+
 <!--
 FROZEN SOURCE
 
@@ -17,60 +27,51 @@ Before making changes:
 Do not refactor, simplify, optimize, or rewrite this file
 without understanding the original implementation and its intent.
 -->
----
-name: caveman-help
-description: >
-  Quick-reference card for all caveman modes, skills, and commands.
-  One-shot display, not a persistent mode. Trigger: /caveman-help,
-  "caveman help", "what caveman commands", "how do I use caveman".
-effort: low
----
+# Caveman — Reference Card
 
-# Caveman — Справка
+Show the card when invoked. One-shot — do NOT change the mode, do not write flag files, do not persist anything. Output in caveman style.
 
-Показывать карточку при вызове. Одноразово — НЕ менять режим, не писать файлы флагов, ничего не сохранять. Вывод в стиле caveman.
+## Modes
 
-## Режимы
+| Mode | Trigger | What it changes |
+|------|---------|-----------------|
+| **Lite** | `/caveman lite` | Drops filler words. Sentence structure survives. |
+| **Full** | `/caveman` | Drops articles, filler, pleasantries, hedging. Fragments OK. Default. |
+| **Ultra** | `/caveman ultra` | Extreme compression. Bare fragments. Tables instead of prose. |
 
-| Режим | Триггер | Что меняет |
-|-------|---------|-----------|
-| **Lite** | `/caveman lite` | Убирает мусорные слова. Структура предложений сохраняется. |
-| **Full** | `/caveman` | Убирает артикли, мусор, любезности, неуверенность. Фрагменты OK. По умолчанию. |
-| **Ultra** | `/caveman ultra` | Экстремальное сжатие. Голые фрагменты. Таблицы вместо текста. |
+The mode holds until changed or the session ends.
 
-Режим держится до смены или конца сессии.
+## Skills
 
-## Навыки
+| Skill | Trigger | What it does |
+|-------|---------|--------------|
+| **caveman-commit** | `/caveman-commit` | Terse commit messages. Conventional Commits. Subject ≤50 chars. |
+| **caveman-review** | `/caveman-review` | One-line PR comments: `L42: bug: user null. Add guard.` |
+| **caveman-compress** | `/caveman-compress <file>` | Compresses .md files into caveman prose. Saves ~46% of input tokens. |
+| **caveman-help** | `/caveman-help` | This card. |
 
-| Навык | Триггер | Что делает |
-|-------|---------|-----------|
-| **caveman-commit** | `/caveman-commit` | Краткие сообщения коммитов. Conventional Commits. Тема ≤50 символов. |
-| **caveman-review** | `/caveman-review` | Однострочные комментарии к PR: `L42: bug: user null. Добавь guard.` |
-| **caveman-compress** | `/caveman-compress <файл>` | Сжимает .md файлы в caveman-прозу. Экономит ~46% входных токенов. |
-| **caveman-help** | `/caveman-help` | Эта карточка. |
+## Deactivation
 
-## Деактивация
+Say "stop caveman" or "normal mode". Re-enable with `/caveman`.
 
-Скажи "stop caveman" или "normal mode". Включить снова: `/caveman`.
+## Configuring the default mode
 
-## Настройка режима по умолчанию
+Default = `full`. To change it:
 
-По умолчанию = `full`. Изменить:
-
-**Переменная окружения** (высший приоритет):
+**Environment variable** (highest priority):
 ```bash
 export CAVEMAN_DEFAULT_MODE=ultra
 ```
 
-**Файл конфига** (`~/.config/caveman/config.json`):
+**Config file** (`~/.config/caveman/config.json`):
 ```json
 { "defaultMode": "lite" }
 ```
 
-Установи `"off"` — отключит авто-активацию при старте сессии. Ручное включение через `/caveman` всё равно работает.
+Set `"off"` to disable auto-activation at session start. Manual `/caveman` still works.
 
-Приоритет: env var > config file > `full`.
+Priority: env var > config file > `full`.
 
-## Подробнее
+## More
 
-Полная документация: https://github.com/JuliusBrussee/caveman
+Full documentation: https://github.com/JuliusBrussee/caveman

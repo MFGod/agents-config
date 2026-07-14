@@ -9,33 +9,33 @@ effort: low
 
 # RTK (Rust Token Killer)
 
-RTK перехватывает Bash-команды через PreToolUse hook и переписывает их для сжатия вывода.
-Работает на уровне выполнения команд — независимо от Caveman и Headroom.
+RTK intercepts Bash commands through a PreToolUse hook and rewrites them to compress their output.
+It works at the command-execution level — independent of Caveman and Headroom.
 
-## Команды
+## Commands
 
-- `/rtk` или `/rtk on` — включить переписывание
-- `/rtk off` — выключить
+- `/rtk` or `/rtk on` — enable rewriting
+- `/rtk off` — disable
 
-## Режимы
+## Modes
 
-| Режим | Поведение |
-|-------|-----------|
-| `on` | Переписывание: `git status` → `rtk git status` |
-| `off` | Команды выполняются без изменений |
+| Mode | Behavior |
+|------|----------|
+| `on` | Rewrites: `git status` → `rtk git status` |
+| `off` | Commands run unchanged |
 
-## Поведение
+## How it works
 
-Хук `mode-tracker.js` обрабатывает команду и обновляет флаг `~/.claude/.rtk-active`
-**до** того как модель отвечает. Флаг читается в `rtk-rewrite.sh` при каждом вызове Bash.
+The `mode-tracker.js` hook processes the command and updates the `~/.claude/.rtk-active` flag
+**before** the model replies. `rtk-rewrite.sh` reads that flag on every Bash call.
 
-Определи новый статус по намерению пользователя:
-- `/rtk off`, "выключить rtk", "disable rtk" → **OFF** — сообщи: "RTK OFF. Команды выполняются без переписывания."
-- `/rtk on`, `/rtk`, "включить rtk", "enable rtk" → **ON** — сообщи: "RTK ON. Bash-команды автоматически оптимизируются."
+Determine the new status from the user's intent:
+- `/rtk off`, "выключить rtk", "disable rtk" → **OFF** — report: "RTK OFF. Команды выполняются без переписывания."
+- `/rtk on`, `/rtk`, "включить rtk", "enable rtk" → **ON** — report: "RTK ON. Bash-команды автоматически оптимизируются."
 
-## Статистика
+## Stats
 
 ```bash
-rtk gain           # сбережения токенов за сессию
-rtk gain --graph   # ASCII-график за 30 дней
+rtk gain           # token savings for the session
+rtk gain --graph   # ASCII graph over 30 days
 ```

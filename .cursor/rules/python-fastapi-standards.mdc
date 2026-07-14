@@ -1,95 +1,87 @@
 ---
-description: Стандарты FastAPI service-connector (async, httpx, lifespan). Подключай при работе с main.py, core/, service/client/router.
+description: FastAPI service-connector standards (async, httpx, lifespan). Engage when working with main.py, core/, service/client/router.
 globs: "src/main.py,src/core/**/*.py,src/**/*service*.py,src/**/*client*.py,src/**/*router*.py"
 alwaysApply: false
 ---
 <!-- SYNC: .claude/rules/python-fastapi-standards.md -->
 
----
-paths:
-  - "src/main.py"
-  - "src/core/**/*.py"
----
-
-<!-- SYNC: .cursor/rules/python-fastapi-standards.mdc -->
-
 # Python FastAPI
 
-Эталон: сервис-коннектор с `src/main.py`, `core/`, доменными пакетами и HTTP-клиентами.
-Дополняет `global-standards.md`. Не смешивай с Django-слоями.
+Reference implementation: a connector service with `src/main.py`, `core/`, domain packages, and HTTP clients.
+Extends `global-standards.md`. Do not mix with Django layers.
 
-## Структура
+## Structure
 
 ```
 src/
   main.py          # composition root, FastAPI app, routes
   core/            # config, logger, sentry, api_key
-  <domain>/        # бизнес-логика, *Service
-  <integration>/   # *client.py — внешние API (httpx)
-tests/conftest.py  # env до импорта config
+  <domain>/        # business logic, *Service
+  <integration>/   # *client.py — external APIs (httpx)
+tests/conftest.py  # env set before config is imported
 ```
 
-## Конфигурация
+## Configuration
 
 - `pydantic_settings.BaseSettings`, `SettingsConfigDict(extra="ignore")`.
-- Обязательные поля (`str` без default) — падают при старте автоматически.
-- Кросс-полевая валидация — `@model_validator(mode="after")`.
-- Fail fast: невалидный конфиг → ошибка до приёма трафика.
+- Required fields (`str` with no default) fail at startup automatically.
+- Cross-field validation — `@model_validator(mode="after")`.
+- Fail fast: an invalid config errors out before traffic is accepted.
 
 ## FastAPI app
 
-- `FastAPI(lifespan=...)` — startup/shutdown клиентов, stores, tasks.
-- Инициализация — в lifespan, не на уровне модуля.
-- Состояние процесса — `app.state`.
-- Shutdown: `aclose()` клиентов, `cancel` tasks, flush логов.
-- `/healthcheck`: GET и HEAD, `include_in_schema=False`.
+- `FastAPI(lifespan=...)` — startup/shutdown of clients, stores, tasks.
+- Initialization goes in the lifespan, not at module level.
+- Process state lives in `app.state`.
+- Shutdown: `aclose()` clients, `cancel` tasks, flush logs.
+- `/healthcheck`: GET and HEAD, `include_in_schema=False`.
 
-## HTTP и async
+## HTTP and async
 
-- Handlers тонкие: парсинг → auth → service → маппинг ответа.
-- Долгая работа — `BackgroundTasks` или lifespan asyncio tasks.
-- Конкурентные операции одного ресурса — `asyncio.Lock` по ключу.
-- `httpx.AsyncClient`: один на runtime, явный timeout, не на запрос.
+- Handlers stay thin: parse → auth → service → map the response.
+- Long-running work — `BackgroundTasks` or lifespan asyncio tasks.
+- Concurrent operations on one resource — `asyncio.Lock` keyed per resource.
+- `httpx.AsyncClient`: one per runtime with an explicit timeout, not one per request.
 
-## Безопасность
+## Security
 
-- API key: `APIKeyHeader` + `HTTPException(401)` при включённом флаге.
-- Webhook — проверка secret/header до разбора body.
-- Не логировать authorization, token, password, secret, api_key.
+- API key: `APIKeyHeader` + `HTTPException(401)` when the flag is enabled.
+- Webhook — verify secret/header before parsing the body.
+- Never log authorization, token, password, secret, api_key.
 
-## Логирование
+## Logging
 
-- loguru (или принятый structured logger); `traceId` во всех значимых логах.
-- JSON в stdout для прод-среды. Raw payloads — только при флаге `LOG_RAW_PAYLOADS`.
+- loguru (or the project's structured logger); `traceId` in every meaningful log line.
+- JSON to stdout in production. Raw payloads only under the `LOG_RAW_PAYLOADS` flag.
 
-## Ошибки
+## Errors
 
-- Доменные исключения: `*Error(RuntimeError)` с `status_code`.
-- HTTP mapping в handler/dependency, не разбросан по service.
-- Retry только для transient-ошибок (сетевые, 429, 502/503/504); max 3, exponential backoff.
+- Domain exceptions: `*Error(RuntimeError)` carrying a `status_code`.
+- HTTP mapping lives in the handler/dependency, not scattered across services.
+- Retry only transient errors (network, 429, 502/503/504); max 3, exponential backoff.
 
-## Тесты
+## Tests
 
-- pytest, `pythonpath = ["src"]` в `pyproject.toml`.
-- `conftest.py`: `os.environ.setdefault(...)` **до** импорта модулей, читающих settings при import.
-- Unit-тесты service/mapper без поднятия всего app.
+- pytest, `pythonpath = ["src"]` in `pyproject.toml`.
+- `conftest.py`: `os.environ.setdefault(...)` **before** importing modules that read settings at import time.
+- Unit-test services/mappers without standing up the whole app.
 
-## Инструменты
+## Tooling
 
 ruff: line-length 100, double quotes; pre-commit: ruff + ruff-format.
 
-## Антипаттерны
+## Anti-patterns
 
-- Бизнес-логика в route handlers; sync `requests` в async без `to_thread`.
-- `httpx.AsyncClient` на каждый запрос; глобальные singletons вне lifespan.
-- Импорт `settings` в тестах без подготовки env в conftest.
+- Business logic in route handlers; sync `requests` inside async without `to_thread`.
+- An `httpx.AsyncClient` per request; global singletons outside the lifespan.
+- Importing `settings` in tests without preparing env in conftest.
 
-## Чеклист
+## Checklist
 
 ASYNC/HTTP CHECK:
-- `AsyncClient` в lifespan, timeout явный, `Lock` по ключу для конкурентности?
-- Retry только transient, не 4xx без rate limit?
+- `AsyncClient` in the lifespan, timeout explicit, keyed `Lock` for concurrency?
+- Retry limited to transient errors, no retrying 4xx without a rate limit?
 
 LIFECYCLE CHECK:
-- lifespan: `aclose()` клиентов, cancel tasks, `/healthcheck` HEAD+GET?
-- Нет module-level singletons вне lifespan? Конфиг валидируется до трафика?
+- lifespan: `aclose()` clients, cancel tasks, `/healthcheck` on HEAD+GET?
+- No module-level singletons outside the lifespan? Config validated before traffic?

@@ -1,8 +1,8 @@
 ---
 name: deploy
 description: >
-  Безопасный deploy workflow: чеклист dev→test→prod с блокировкой при красных тестах,
-  несмёрженных MR, отсутствии тега версии. Не деплоит без явного OK пользователя.
+  Safe deploy workflow: a dev→test→prod checklist that blocks on red tests,
+  unmerged MRs, or a missing version tag. Never deploys without an explicit OK from the user.
   Trigger: "/deploy", "задеплой", "deploy", "выкатить на prod", "релиз",
   "push to production", "деплой на стейджинг", "выкатить фичу".
 effort: medium
@@ -10,49 +10,49 @@ effort: medium
 
 # deploy
 
-Deploy без чеклиста = рулетка. Не пропускай фазы.
+A deploy without a checklist is roulette. Do not skip phases.
 
 ---
 
-## Фаза 1 — Pre-deploy checklist
+## Phase 1 — Pre-deploy checklist
 
-**СТОП если хоть одно «нет»:**
+**STOP on any single "no":**
 
-- [ ] **Тесты зелёные** в CI/CD или локально на ветке назначения.
-- [ ] **MR/PR смёрджены** — нет open MR, блокирующих релиз.
-- [ ] **Миграции** — если есть, выполнены в staging перед prod. Используй `/migrate`.
-- [ ] **Версия/тег** — для prod требуется тег (`v1.2.3`) или явная пометка релиза.
-- [ ] **Changelog обновлён** — пользователь знает что деплоим.
-- [ ] **Rollback план** — как откатить, если prod сломается. Предыдущий деплой известен?
+- [ ] **Tests green** in CI/CD or locally on the destination branch.
+- [ ] **MRs/PRs merged** — no open MR blocking the release.
+- [ ] **Migrations** — if any, already applied in staging before prod. Use `/migrate`.
+- [ ] **Version/tag** — prod requires a tag (`v1.2.3`) or an explicit release marker.
+- [ ] **Changelog updated** — the user knows what is being deployed.
+- [ ] **Rollback plan** — how to revert if prod breaks. Is the previous deploy known?
 
-Если хоть один пункт «нет» → **СТОП**, сообщи пользователю, не продолжай.
-
----
-
-## Фаза 2 — Staging (если не dev→prod напрямую)
-
-Последовательность: `dev` → `test/staging` → `prod`.
-
-Проверь в staging:
-- [ ] Приложение стартует без ошибок (health check endpoint, логи запуска).
-- [ ] Smoke-тесты / ручная проверка критических пользовательских сценариев.
-- [ ] Миграции применились корректно.
-- [ ] Внешние интеграции (API, очереди, S3) работают.
-
-**Не деплой в prod** пока staging не прошёл.
+If any item is "no" → **STOP**, tell the user, do not continue.
 
 ---
 
-## Фаза 3 — Deploy в target окружение
+## Phase 2 — Staging (unless going dev→prod directly)
 
-**Только после явного OK пользователя.**
+Sequence: `dev` → `test/staging` → `prod`.
 
-Покажи команду до выполнения:
+Verify in staging:
+- [ ] The app starts without errors (health check endpoint, startup logs).
+- [ ] Smoke tests / manual check of the critical user flows.
+- [ ] Migrations applied correctly.
+- [ ] External integrations (API, queues, S3) work.
+
+**Do not deploy to prod** until staging passes.
+
+---
+
+## Phase 3 — Deploy to the target environment
+
+**Only after an explicit OK from the user.**
+
+Show the command before running it:
 ```
 Деплою в <окружение>: <команда>
 ```
 
-Типичные команды:
+Typical commands:
 ```bash
 # Docker Compose
 docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
@@ -68,25 +68,25 @@ git push <remote> <branch>
 ssh user@host "cd /app && git pull && systemctl restart app"
 ```
 
-Логи деплоя — на экране. При ошибке → **СТОП**, переходи к rollback.
+Deploy logs stay on screen. On error → **STOP**, go to rollback.
 
 ---
 
-## Фаза 4 — Post-deploy verify
+## Phase 4 — Post-deploy verify
 
-- [ ] **Health check** — HTTP 200 на `/health`, `/ping` или главной странице.
-- [ ] **Логи** — нет ERROR/CRITICAL в первые 2–3 минуты после деплоя.
-- [ ] **Ключевые метрики** — latency, error rate, queue depth не выросли аномально.
-- [ ] **Smoke-тест** — один критический пользовательский сценарий вручную.
-- [ ] **Версия** — `/version` endpoint или заголовок отдаёт ожидаемую версию.
+- [ ] **Health check** — HTTP 200 on `/health`, `/ping`, or the home page.
+- [ ] **Logs** — no ERROR/CRITICAL in the first 2–3 minutes after the deploy.
+- [ ] **Key metrics** — latency, error rate, queue depth show no abnormal rise.
+- [ ] **Smoke test** — one critical user flow, by hand.
+- [ ] **Version** — the `/version` endpoint or header returns the expected version.
 
-**Выход:** все зелёные → деплой успешен.
+**Exit:** all green → the deploy succeeded.
 
 ---
 
-## Экстренный rollback
+## Emergency rollback
 
-Если verify провалился:
+If verify fails, tell the user:
 
 ```
 СТОП. ROLLBACK.
@@ -94,9 +94,9 @@ ssh user@host "cd /app && git pull && systemctl restart app"
 Причина: <что сломалось>.
 ```
 
-Типовой откат:
+Typical rollback:
 ```bash
-# Docker: предыдущий тег
+# Docker: previous tag
 docker compose -f docker-compose.prod.yml pull <image>:<prev-tag>
 docker compose -f docker-compose.prod.yml up -d
 
@@ -107,4 +107,4 @@ kubectl rollout undo deployment/<name> -n <namespace>
 git revert HEAD && git push
 ```
 
-После rollback — зафикси инцидент, не деплой снова без root cause.
+After a rollback — record the incident; do not redeploy without a root cause.

@@ -1,13 +1,13 @@
 ---
-description: Создание project-profile.mdc при отсутствии контекста репозитория
+description: Creating project-profile.mdc when repository context is missing
 alwaysApply: true
 ---
 
-# Профиль проекта
+# Project profile
 
-Перед первой нетривиальной задачей, если нет `.cursor/rules/project-profile.mdc`:
-1. Изучи README, манифест пакетов, `src/`, CI.
-2. Создай файл (≤50 строк) по шаблону:
+Before the first non-trivial task, if `.cursor/rules/project-profile.mdc` does not exist:
+1. Study the README, the package manifest, `src/`, and CI.
+2. Create the file (≤50 lines) from this template:
 
 ```markdown
 ---
@@ -23,5 +23,5 @@ alwaysApply: true
 ## Тесты — <команда запуска>
 ```
 
-3. Покажи черновик → жди подтверждения. Критичное неизвестное — спроси до правок.
-Не пересоздавай без запроса. Заполняй фактами из репозитория; неизвестное — «уточнить у команды».
+3. Show the draft → wait for confirmation. Critical unknown — ask before editing.
+Do not recreate it unasked. Fill it with facts from the repository; mark anything unknown as «уточнить у команды».
