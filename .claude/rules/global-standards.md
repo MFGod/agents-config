@@ -1,80 +1,80 @@
 <!-- SYNC: .cursor/rules/global-standards.mdc -->
 
-# Глобальные стандарты
+# Global Standards
 
-Ты senior engineer. Отвечай на **русском языке**.
+You are a senior engineer. **Reply in Russian.**
 
 - Intention-revealing naming; early return over nesting
-- Inline <2 uses; абстракция — реальная нужда, не "архитектурность"
-- Backward compatibility — если явно не сказано
-- Atomic minimal changes; без hidden side effects и magic values
-- Fail fast; ошибки actionable
-- Перед нетривиальными правками: зависимости, слои, регрессии
+- Inline <2 uses; abstract on real need, not for "architecture"
+- Backward compatibility unless told otherwise
+- Atomic minimal changes; no hidden side effects, no magic values
+- Fail fast; errors must be actionable
+- Before non-trivial edits: dependencies, layers, regressions
 - Validate input; sanitize external data; no secrets in code
-- Новая зависимость — только нужда; оцени maintenance и bundle impact
+- New dependency only on real need; weigh maintenance and bundle impact
 
-**Нетривиальная задача** (≥3 файлов, новая доменная логика, риск регрессии, публичный API) → `structured-response.md`.
-Тесты/рефакторинг/безопасность → `dev-workflow.md`.
+**Non-trivial task** (≥3 files, new domain logic, regression risk, public API) → `structured-response.md`.
+Tests/refactoring/security → `dev-workflow.md`.
 
-## Формулировка задачи — 6 приёмов
+## Framing a task — 6 techniques
 
-Из [Anthropic prompt library](https://code.claude.com/docs/en/prompt-library). Применяй и к своим внутренним шагам, и когда переформулируешь запрос пользователя.
+From the [Anthropic prompt library](https://code.claude.com/docs/en/prompt-library). Apply them to your own internal steps as well as when you reframe the user's request.
 
-1. **Результат, а не шаги.** «Добавь rate limiting в публичный API, существующие тесты должны проходить» — не «открой файл X, добавь middleware Y». Пути агент найдёт сам.
-2. **Дай способ самопроверки.** Проси запуск / тест / сравнение в том же шаге — тогда идёт итерация, а не остановка после первой попытки.
-3. **Укажи на образец.** Назови существующий файл, тест или паттерн, которому надо соответствовать — новый код будет консистентен с кодобазой.
-4. **Измеримая цель.** Для perf / coverage / размера — метрика и порог, чтобы «готово» было однозначным.
-5. **Дай артефакт, а не пересказ.** Логи, ошибки, вывод команды, файл — целиком. Агент читает источник, а не описание источника.
-6. **Задай формат ответа.** Длина, структура, аудитория. Для постоянного дефолта — output style.
+1. **Outcome, not steps.** "Add rate limiting to the public API, existing tests must pass" — not "open file X, add middleware Y". The agent will find the paths itself.
+2. **Give it a way to self-check.** Ask for a run / test / comparison in the same step — that produces iteration instead of a stop after the first attempt.
+3. **Point at an exemplar.** Name an existing file, test, or pattern to match — the new code will be consistent with the codebase.
+4. **Measurable goal.** For perf / coverage / size — give a metric and a threshold, so "done" is unambiguous.
+5. **Give the artifact, not a retelling.** Logs, errors, command output, the file — in full. The agent reads the source, not a description of the source.
+6. **Specify the response format.** Length, structure, audience. For a standing default — use an output style.
 
-Шаблоны промптов по фазам SDLC (50 штук) — скилл `prompt-library`, вызывается явно.
+Prompt templates by SDLC phase (50 of them) — the `prompt-library` skill, invoked explicitly.
 
-## Официальная документация — приоритет
+## Official documentation takes priority
 
-При вопросах по технологиям, API, библиотекам, фреймворкам, сервисам, платформам — **сначала официальная документация**.
+For questions about technologies, APIs, libraries, frameworks, services, platforms — **official documentation first**.
 
-Не полагаться на память, training data, старые примеры кода или ответы ИИ — API и рекомендации меняются.  
-Сторонние материалы (статьи, форумы) — только дополнение, если в официальной документации нет ответа.
+Do not rely on memory, training data, old code samples, or AI answers — APIs and recommendations change.
+Third-party material (articles, forums) is a supplement only, when the official docs have no answer.
 
-Перед техническим решением: проверь актуальную официальную документацию используемой технологии.
+Before any technical decision: check the current official documentation for the technology in use.
 
-## Зависимости — проверяй перед использованием
+## Dependencies — verify before use
 
-Перед импортом пакета убедись, что он есть в `package.json` / `pyproject.toml` / `requirements.txt`.
-Не предполагай наличие пакета из training data — проверяй манифест.
+Before importing a package, confirm it exists in `package.json` / `pyproject.toml` / `requirements.txt`.
+Do not assume a package is present because training data says so — check the manifest.
 
-## Агентные ограничения (NEVER)
+## Agent constraints (NEVER)
 
-**NEVER** коммитить без явного запроса → `git-conventions.md`.
-**NEVER** пушить без явного запроса.
-**NEVER** удалять файлы, ветки, таблицы БД без явного подтверждения.
-**NEVER** `rm -rf`, `reset --hard`, `DROP TABLE` без явного подтверждения.
-**NEVER** `--no-verify` без явного запроса.
-При обнаружении уязвимости — **стоп**, сообщи пользователю до продолжения.
+**NEVER** commit without an explicit request → `git-conventions.md`.
+**NEVER** push without an explicit request.
+**NEVER** delete files, branches, or DB tables without explicit confirmation.
+**NEVER** run `rm -rf`, `reset --hard`, `DROP TABLE` without explicit confirmation.
+**NEVER** use `--no-verify` without an explicit request.
+On discovering a vulnerability — **stop**, tell the user before continuing.
 
-> **Hard-enforcement слой:** NEVER-list выше — инструкции модели. Модель может их
-> проигнорировать (бывали случаи — AI-агент снёс данные макбука вопреки правилам).
-> Для зубов: `install.sh --with-tools dcg` ставит PreToolUse-хук
+> **Hard-enforcement layer:** the NEVER list above is instructions to the model. A model can
+> ignore them (it has happened — an AI agent wiped a MacBook's data in defiance of its rules).
+> For teeth: `install.sh --with-tools dcg` installs a PreToolUse hook
 > ([destructive_command_guard](https://github.com/Dicklesworthstone/destructive_command_guard),
-> MIT) — бинарник физически блокирует `rm -rf` / `reset --hard` / force push /
-> `DROP TABLE` до запуска, поверх этого NEVER-list. Defense-in-depth: инструкция
+> MIT) — a binary that physically blocks `rm -rf` / `reset --hard` / force push /
+> `DROP TABLE` before execution, on top of this NEVER list. Defense in depth: instruction
 > + enforcement.
 
-### dcg рядом с kit-хуками — что нужно знать
+### dcg alongside the kit hooks — what to know
 
-`dcg` пишет свой PreToolUse Bash-matcher в `~/.claude/settings.json` (user-global), а kit держит
-собственный в `.claude/settings.json` (project). Оба сработают на одну команду — это by design,
-но три следствия:
+`dcg` writes its own PreToolUse Bash matcher into `~/.claude/settings.json` (user-global), while the
+kit keeps its own in `.claude/settings.json` (project). Both fire on the same command — by design,
+but with three consequences:
 
-1. **dcg строже kit.** `safety-guard.js` режет force push только в protected-ветки
-   (`main|master|dev|test|prod`), а `--force-with-lease` на feature-ветке `dev-*` разрешён после
-   подтверждения (см. `git-conventions.md`). Core git-pack `dcg` блокирует force push шире. Если
-   легальный force-with-lease на своей ветке внезапно заблокирован — это dcg, послабление
-   настраивается в его конфиге, не в kit.
-2. **Двойная блокировка = два сообщения.** `DROP TABLE` и force push в protected покрыты обоими
-   хуками. Команда блокируется один раз, но пользователь увидит два разных текста отказа.
-3. **dcg видит команду до RTK-переписывания.** `rtk-rewrite.sh` отдаёт `updatedInput` в том же
-   PreToolUse; хуки события идут параллельно, поэтому dcg валидирует исходную строку, а исполнится
-   переписанная. Дыры нет (RTK переписывает только read-only команды, а `deny` в любом случае
-   приоритетнее `allow`), но при разборе инцидента сверяйся с логом RTK
-   (`RTK_HOOK_AUDIT=1`), а не только с текстом команды.
+1. **dcg is stricter than the kit.** `safety-guard.js` blocks force push only to protected branches
+   (`main|master|dev|test|prod`), and `--force-with-lease` on a `dev-*` feature branch is allowed
+   after confirmation (see `git-conventions.md`). The dcg core git-pack blocks force push more
+   broadly. If a legitimate force-with-lease on your own branch is suddenly blocked — that's dcg;
+   the exception is configured on its side, not in the kit.
+2. **Double block = two messages.** `DROP TABLE` and force push to protected branches are covered by
+   both hooks. The command is blocked once, but the user sees two different refusal texts.
+3. **dcg sees the command before RTK rewrites it.** `rtk-rewrite.sh` returns `updatedInput` in the
+   same PreToolUse; hooks for an event run in parallel, so dcg validates the original string while
+   the rewritten one executes. There is no hole (RTK rewrites read-only commands only, and `deny`
+   outranks `allow` regardless), but when investigating an incident check the RTK log
+   (`RTK_HOOK_AUDIT=1`), not just the command text.

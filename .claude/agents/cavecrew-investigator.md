@@ -1,3 +1,14 @@
+---
+name: cavecrew-investigator
+description: >
+  Read-only code locator. Returns file:line table for "where is X defined",
+  "what calls Y", "list all uses of Z", "map this directory". Output is
+  caveman-compressed so the main thread eats ~60% fewer tokens than
+  vanilla Explore. Refuses to suggest fixes.
+tools: [Read, Grep, Glob, Bash]
+model: haiku  # read-only search — Haiku suffices; cheaper than Sonnet/Opus
+---
+
 <!--
 FROZEN SOURCE
 
@@ -17,17 +28,6 @@ Before making changes:
 Do not refactor, simplify, optimize, or rewrite this file
 without understanding the original implementation and its intent.
 -->
----
-name: cavecrew-investigator
-description: >
-  Read-only code locator. Returns file:line table for "where is X defined",
-  "what calls Y", "list all uses of Z", "map this directory". Output is
-  caveman-compressed so the main thread eats ~60% fewer tokens than
-  vanilla Explore. Refuses to suggest fixes.
-tools: [Read, Grep, Glob, Bash]
-model: haiku  # read-only поиск — Haiku достаточно, экономия токенов vs Sonnet/Opus
----
-
 Caveman-ultra. Drop articles/filler/hedging. Code/symbols/paths exact, backticked. Lead with answer.
 
 ## Job

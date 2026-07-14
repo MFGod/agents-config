@@ -170,7 +170,7 @@ copy_dir() {
 copy_stack_rules() {
   local src="$1" dst="$2" ext="$3"
   [[ "$INSTALL_REACT"   == true ]] && copy_file_safe "$src/react-standards.$ext"         "$dst/react-standards.$ext"
-  [[ "$INSTALL_VUE"     == true ]] && copy_file_safe "$src/frontend-standards.$ext"       "$dst/frontend-standards.$ext"
+  [[ "$INSTALL_VUE"     == true ]] && copy_file_safe "$src/vue-standards.$ext"            "$dst/vue-standards.$ext"
   [[ "$INSTALL_FASTAPI" == true ]] && copy_file_safe "$src/python-fastapi-standards.$ext" "$dst/python-fastapi-standards.$ext"
   [[ "$INSTALL_DJANGO"  == true ]] && copy_file_safe "$src/python-django-standards.$ext"  "$dst/python-django-standards.$ext"
   return 0
@@ -363,7 +363,7 @@ install_claude_core() {
     copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 
-  for rule in global-standards dev-workflow structured-response gstack-workflow git-conventions testing-standards; do
+  for rule in global-standards dev-workflow structured-response gstack-workflow git-conventions testing-standards external-content; do
     copy_file_safe "$SCRIPT_DIR/.claude/rules/$rule.md" "$TARGET/.claude/rules/$rule.md"
   done
 
@@ -411,7 +411,7 @@ install_cursor_core() {
 
   for rule in global-standards dev-workflow structured-response gstack-workflow \
               git-conventions testing-standards session-teacher debug migrate deploy \
-              cursor-kit-maintenance project-profile-bootstrap; do
+              cursor-kit-maintenance project-profile-bootstrap external-content; do
     copy_file_safe "$SCRIPT_DIR/.cursor/rules/$rule.mdc" "$TARGET/.cursor/rules/$rule.mdc"
   done
   [[ "$INSTALL_CAVEMAN" == true ]] && \
@@ -611,7 +611,6 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
     printf "    headroom          — сжатие tool outputs, экономит токены контекста\n"
     printf "    context7          — актуальная документация библиотек прямо в промпт\n"
     printf "    playwright        — управление браузером (UI-тесты, web-автоматизация)\n"
-    printf "    chrome-devtools   — инспекция DOM, сети, консоли Chrome\n"
   fi
   if [[ "$DO_CURSOR" == true ]]; then
     printf "  Cursor (.cursor/mcp.json):\n"
@@ -619,6 +618,7 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
     printf "    filesystem  — чтение/запись файлов проекта (whitelist: текущая папка)\n"
     printf "    fetch       — HTTP запросы к URL, чтение веб-страниц\n"
     printf "    context7    — актуальная документация библиотек прямо в промпт\n"
+    printf "    playwright  — управление браузером (UI-тесты, web-автоматизация)\n"
   fi
 else
   printf "%bНичего не установлено.%b\n" "$YELLOW" "$RESET"

@@ -1,10 +1,10 @@
 ---
 name: session-teacher
 description: >
-  Инкрементальный teaching workflow: пользователь формулирует понимание →
-  Claude заполняет пробелы. Running MD checklist (проблема / решение / broader context).
-  Quiz через AskUserQuestion (рандомный порядок, ответ скрыт до submit).
-  Уровни: ELI5 / ELI14 / ELII. Сессия не завершается до полного чеклиста.
+  Incremental teaching workflow: the user articulates their understanding →
+  Claude fills the gaps. Running MD checklist (problem / solution / broader context).
+  Quiz via AskUserQuestion (randomised option order, answer hidden until submit).
+  Levels: ELI5 / ELI14 / ELII. The session does not end until the checklist is complete.
   Trigger: "/session-teacher", "teach me", "quiz меня", "eli5", "eli14", "elii",
   "объясни как учитель", "проверь моё понимание", "teaching session".
 effort: medium
@@ -12,13 +12,13 @@ effort: medium
 
 # session-teacher
 
-Инкрементальный teaching workflow с итеративной верификацией понимания.
+An incremental teaching workflow with iterative verification of understanding.
 
-## Старт
+## Start
 
-1. Если тема не указана — спроси одним вопросом.
-2. Спроси уровень объяснения: **ELI5** / **ELI14** / **ELII** (default: ELII).
-3. Создай running checklist из 3 категорий (3–5 пунктов итого):
+1. If no topic is given — ask for it in a single question.
+2. Ask for the explanation level: **ELI5** / **ELI14** / **ELII** (default: ELII).
+3. Build a running checklist across 3 categories (3–5 items total):
 
 ```
 ## Понимание: <тема>
@@ -34,53 +34,53 @@ effort: medium
 - [ ] <где применяется / trade-offs>
 ```
 
-4. Покажи чеклист. Спроси: *«Расскажи что уже знаешь об этом.»*
+4. Show the checklist. Ask: *«Расскажи что уже знаешь об этом.»*
 
 ---
 
-## Уровни объяснения
+## Explanation levels
 
-| Уровень | Стиль |
-|---------|-------|
-| **ELI5** | Аналогии для детей, ноль терминов |
-| **ELI14** | Базовые термины, понятные подростку |
-| **ELII** | Intern: точные термины, реальные примеры, без лишних упрощений |
+| Level | Style |
+|-------|-------|
+| **ELI5** | Analogies a child would get, zero jargon |
+| **ELI14** | Basic terms a teenager would follow |
+| **ELII** | Intern: precise terms, real examples, no needless simplification |
 
-Команды `/eli5`, `/eli14`, `/elii` — переключают уровень немедленно для следующего объяснения.
-
----
-
-## Цикл по каждому пункту чеклиста
-
-Для каждого невериф. пункта по порядку:
-
-**1. Артикуляция**
-
-Спроси: *«Своими словами: [пункт]?»*
-
-**2. Анализ ответа**
-
-- Верно → отметь `[x]`, краткое подтверждение, переход к quiz.
-- Пробел → объясни на текущем уровне, задай уточняющий вопрос.
-- Неверно → мягкая коррекция + объяснение; не переходи дальше до понимания.
-
-**3. Quiz через `AskUserQuestion`**
-
-- 1–2 вопроса на пункт.
-- Минимум 3 варианта ответа; **рандомизируй порядок вариантов каждый раз**.
-- Не давай подсказок в тексте вопроса.
-- После submit: объясни почему верный вариант верен, дистракторы — почему нет.
-
-**4. Фиксация**
-
-Quiz пройден → `[x]` в чеклисте. Покажи обновлённый чеклист после каждого пункта.
+The commands `/eli5`, `/eli14`, `/elii` switch the level immediately for the next explanation.
 
 ---
 
-## Завершение
+## Loop for each checklist item
 
-Сессия завершается **только** когда все пункты `[x]`.
+For each unverified item, in order:
 
-Финал:
-- Краткое резюме темы на текущем уровне (3–5 предложений).
+**1. Articulation**
+
+Ask: *«Своими словами: [пункт]?»*
+
+**2. Analyse the answer**
+
+- Correct → mark `[x]`, confirm briefly, move to the quiz.
+- Gap → explain at the current level, ask a follow-up question.
+- Wrong → gentle correction plus explanation; do not move on until it lands.
+
+**3. Quiz via `AskUserQuestion`**
+
+- 1–2 questions per item.
+- At least 3 options; **randomise the option order every time**.
+- Do not leak hints in the question text.
+- After submit: explain why the right option is right, and why each distractor is not.
+
+**4. Recording**
+
+Quiz passed → `[x]` on the checklist. Show the updated checklist after every item.
+
+---
+
+## Finishing
+
+The session ends **only** when every item is `[x]`.
+
+Finale:
+- A short summary of the topic at the current level (3–5 sentences).
 - *«Тема закрыта. Отличная работа.»*

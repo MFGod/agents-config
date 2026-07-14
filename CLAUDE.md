@@ -1,123 +1,124 @@
 # Agents-config — Claude Code Rules
 
-Ты senior engineer. Отвечай на **русском языке**.
+You are a senior engineer. **Reply in Russian.**
 
 - Intention-revealing naming; early return over nesting
-- Inline при <2 использованиях; абстракция при реальной нужде, не ради "архитектурности"
-- Backward compatibility — если явно не сказано иное
-- Atomic minimal changes; без hidden side effects и magic values
-- Fail fast; ошибки actionable
-- Перед нетривиальными правками: изучи зависимости, границы слоёв, риски регрессий
+- Inline when <2 uses; abstract on real need, not for "architecture"
+- Backward compatibility unless told otherwise
+- Atomic minimal changes; no hidden side effects, no magic values
+- Fail fast; errors must be actionable
+- Before non-trivial edits: study dependencies, layer boundaries, regression risk
 - Validate input; sanitize external data; no secrets in code
-- Новая зависимость — при необходимости; оцени maintenance и bundle impact
-- **Нетривиальная задача** (≥3 файлов, новая доменная логика, риск регрессии, публичный API) → применяй `structured-response`. Тесты/рефакторинг/безопасность → применяй `dev-workflow`.
+- New dependency only on real need; weigh maintenance and bundle impact
+- **Non-trivial task** (≥3 files, new domain logic, regression risk, public API) → apply `structured-response`. Tests/refactoring/security → apply `dev-workflow`.
 
 ---
 
 ## Kit Agents-config
 
-Нет `.claude/kit-meta.json` → создай `{ "installedAt": "<сегодня ISO 8601>", "kitVersion": "<содержимое .claude/kit-version>" }`, сообщи строкой.
-Для проверки обновлений: `bash install.sh <target>` — install.sh проверяет GitHub и уведомляет автоматически.
+No `.claude/kit-meta.json` → create `{ "installedAt": "<today, ISO 8601>", "kitVersion": "<contents of .claude/kit-version>" }`, report in one line.
+To check for updates: `bash install.sh <target>` — install.sh checks GitHub and notifies automatically.
 
 ---
 
-## Профиль проекта
+## Project profile
 
-Нет `.claude/rules/project-profile.md`, первая нетривиальная задача — изучи (README, манифест, `src/`, CI), создай (≤50 строк): назначение, стек, структура, ветки, что не трогать, тесты. Черновик → жди подтверждения. Критичное неизвестное — спроси до правок. Не пересоздавай без запроса.
+No `.claude/rules/project-profile.md` and this is the first non-trivial task — study the repo (README, manifest, `src/`, CI), then create it (≤50 lines): purpose, stack, structure, branches, what not to touch, tests. Draft → wait for confirmation. Critical unknown → ask before editing. Do not recreate it unasked.
 
 ---
 
-## Self-learning: золотые пути в скиллы
+## Self-learning: golden paths into skills
 
-Мета-скилл `self-learning` фиксирует проверенную процедуру (golden path + тупики) как Agent Skill — следующая сессия начинает с готового маршрута, не переоткрывает его.
+The `self-learning` meta-skill captures a proven procedure (golden path + dead ends) as an Agent Skill — the next session starts with the route in hand instead of rediscovering it.
 
 Triage:
-- **Мультишаг-процедура** (deploy, reach DB, миграции, верификация live) → skill (`.claude/skills/` проект, `~/.claude/skills/` глобал).
-- **Один факт / one-liner** (env var, путь, gotcha) → native memory Claude Code (`~/.claude/projects/.../memory/`), **не** skill. Для иных агентов — `AGENTS.md`/notes.
+- **Multi-step procedure** (deploy, reach DB, migrations, live verification) → skill (`.claude/skills/` project, `~/.claude/skills/` global).
+- **Single fact / one-liner** (env var, path, gotcha) → Claude Code native memory (`~/.claude/projects/.../memory/`), **not** a skill. For other agents — `AGENTS.md`/notes.
 - **One-off** → skip.
 
-Promotion gate (все 3, иначе не skill — оставить tentative note): **passing check** (тест/билд/репро зелёный) + **named failure pattern** + **≥1 ruled-out dead-end**.
-Секреты **не пишем** — только где найти (env var, selector, MCP tool, vault). See `global-standards.md`.
+Promotion gate (all 3, else not a skill — leave a tentative note): **passing check** (test/build/repro green) + **named failure pattern** + **≥1 ruled-out dead-end**.
+**Never write secrets** — only where to find them (env var, selector, MCP tool, vault). See `global-standards.md`.
 
-### Ревизия скиллов — обратная процедура
+### Skill revision — the reverse procedure
 
-`self-learning` только **добавляет**. Без обратного хода набор скиллов растёт, пока не начнёт вредить: `description` каждого лежит в контексте **каждой** сессии, а пересекающиеся описания заставляют агента выбирать не тот скилл. Набор, который только растёт, рано или поздно стоит дороже, чем экономит.
+`self-learning` only **adds**. With no reverse gear the skill set grows until it starts doing harm: every skill's `description` sits in the context of **every** session, and overlapping descriptions make the agent pick the wrong skill. A set that only grows will eventually cost more than it saves.
 
-Проводи ревизию при **≥15 скиллов в проекте** или раз в квартал — что раньше. По каждому:
+Run a revision at **≥15 project skills** or once a quarter — whichever comes first. For each:
 
-1. **Golden path ещё жив?** Команды работают, пути существуют, инструмент не выпилен? Протух — удаляй (с подтверждением). Скилл, уверенно описывающий мёртвый путь, **хуже отсутствия скилла**: следующая сессия ему поверит.
-2. **Срабатывал хоть раз?** Не вызывался ни разу с момента создания — кандидат на вылет.
-3. **С кем пересекается?** Два скилла на одну задачу — оставь один. Если оба нужны, разведи `description` так, чтобы выбор был однозначным.
-4. **Должен ли он вызываться сам?** Скилл — про заданное направление или узкую нишу → `disable-model-invocation: true`. Тогда он не участвует в автовыборе и не путает модель.
+1. **Is the golden path still alive?** Do the commands work, do the paths exist, does the tool still ship? Stale → delete (with confirmation). A skill that confidently describes a dead path is **worse than no skill**: the next session will believe it.
+2. **Has it ever fired?** Never invoked since creation — candidate for removal.
+3. **What does it overlap with?** Two skills for one job — keep one. If both are needed, separate the `description`s so the choice is unambiguous.
+4. **Should it self-invoke at all?** Skill covers a committed direction or a narrow niche → `disable-model-invocation: true`. Then it stays out of auto-selection and stops confusing the model.
 
-Удаление скилла — необратимое действие: показать список, дождаться явного «да».
+Deleting a skill is irreversible — show the list, wait for an explicit "yes".
 
 ---
 
-## Design-скиллы: какой когда
+## Design skills: which one, when
 
-Точка входа по умолчанию — **`impeccable`** (субкоманды craft / audit / critique / polish / harden / animate). Остальные — только когда задача прямо попадает в их нишу.
+Default entry point is **`impeccable`** (subcommands craft / audit / critique / polish / harden / animate). It is the only design skill the model auto-selects for general UI work. The niche ones are a deliberate call — invoke them by name.
 
-| Задача | Скилл |
-|--------|-------|
-| «поправь / сделай UI», направление не названо | `impeccable` + субкоманда |
-| Новый лендинг / портфолио с нуля | `design-taste-frontend` |
-| Апгрейд существующего сайта | `redesign-existing-projects` |
-| «выглядит дёшево», нужен премиум-визуал | `high-end-visual-design` |
-| Палитра / шрифтовая пара / чарты / выбор стека | `ui-ux-pro-max` |
-| UI-полировка, решение «нужна ли анимация» | `emil-design-eng` |
-| Почему юзеры не конвертятся; обоснование UX-решения | `ux-core` |
-| Заданное визуальное направление | `/minimalist-ui`, `/industrial-brutalist-ui` (explicit-only) |
+| Task | Skill | Auto? |
+|------|-------|-------|
+| "fix / build the UI", no direction named | `impeccable` + subcommand | auto |
+| Why users don't convert; rationale for a UX decision | `ux-core` | auto |
+| Choosing a palette / font pairing / chart type / stack | `ui-ux-pro-max` | auto |
+| New landing page / portfolio from scratch | `/design-taste-frontend` | explicit |
+| Upgrading an existing site | `/redesign-existing-projects` | explicit |
+| "Looks cheap", needs a premium visual | `/high-end-visual-design` | explicit |
+| UI polish, deciding "does this need animation" | `/emil-design-eng` | explicit |
+| A committed visual direction | `/minimalist-ui`, `/industrial-brutalist-ui` | explicit |
 
-Правила:
-- **Один визуальный скилл за раз.** Пересечение описаний — не повод тянуть три сразу.
-- `ux-core` **композится** с любым визуальным: даёт «почему», а не «как выглядит». Не замена.
-- Агент `design-critic` — гейт **до** реализации крупной секции (3 альтернативы, бенчмарк против Linear/Stripe/Vercel). Агент `before-after-reviewer` — скоринг **после**. Оба в отдельном контексте, основной не жрут.
-- Explicit-only скиллы модель сама не выбирает — только по прямому вызову пользователя.
+Rules:
+- **One visual skill at a time.** Overlapping descriptions are not a reason to pull in three at once.
+- `ux-core` **composes** with any visual skill: it supplies the "why", not the "how it looks". Not a replacement.
+- The `design-critic` agent is a gate **before** implementing a major section (3 alternatives, benchmarked against Linear/Stripe/Vercel). The `before-after-reviewer` agent scores **after**. Both run in a separate context and don't eat the main one.
+- **Explicit-only is not a demotion — it is what makes the table above true.** A skill marked `disable-model-invocation` drops out of auto-selection *and* out of the session context entirely; its `description` stops competing with `impeccable` and stops being paid for every session. If a task needs one, say so and invoke it by name.
 
 ---
 
 ## Token Efficiency: Headroom + Caveman
 
-**Headroom** сжимает INPUT (tool outputs, file reads → LLM). **Caveman** сжимает OUTPUT (ответы Claude). Вместе — двусторонняя оптимизация.
+**Headroom** compresses INPUT (tool outputs, file reads → LLM). **Caveman** compresses OUTPUT (Claude's replies). Together — optimization in both directions.
 
-| Режим | Headroom | Caveman |
-|-------|----------|---------|
-| Debug / расследование | осторожно (детали могут потеряться) | lite или OFF |
-| Рутина / batch / продакшн | ON | full |
+| Mode | Headroom | Caveman |
+|------|----------|---------|
+| Debug / investigation | careful (detail can be lost) | lite or OFF |
+| Routine / batch / production | ON | full |
 
-MCP headroom: `headroom_compress`, `headroom_retrieve`, `headroom_stats`. Большие tool outputs (поиск, логи, листинги) → `headroom_compress`; восстанавливай через `headroom_retrieve`.
+MCP headroom: `headroom_compress`, `headroom_retrieve`, `headroom_stats`. Large tool outputs (searches, logs, listings) → `headroom_compress`; restore via `headroom_retrieve`.
 
 ---
 
 ## Context Compaction
 
-При авто-сжатии контекста Claude Code сохрани в начале нового контекста:
+When Claude Code auto-compacts the context, carry the following into the top of the new one:
 
-- Текущая фаза gstack (THINK / PLAN / BUILD / REVIEW / TEST) и статус FROZEN GATE.
-- Список изменённых/созданных файлов в этой сессии.
-- Открытые провалы тестов или заблокеры, если есть.
-- Любые решения, принятые явно пользователем (scope, архитектура, отказы от изменений).
+- Current gstack phase (THINK / PLAN / BUILD / REVIEW / TEST) and FROZEN GATE status.
+- List of files changed/created this session.
+- Open test failures or blockers, if any.
+- Any decisions the user made explicitly (scope, architecture, changes ruled out).
 
 ---
 
-## Условные правила (stack-rules)
+## Conditional rules (stack-rules)
 
-Стек-правила — **автоматом** для типов файлов (`paths:` frontmatter). Несколько правил могут активироваться одновременно при совпадении paths.
+Stack rules attach **automatically** by file type (`paths:` frontmatter). Several can activate at once when paths overlap.
 
-| Файл | Когда загружается (auto-attach) |
-|------|--------------------------------|
+| File | When it loads (auto-attach) |
+|------|-----------------------------|
 | `.claude/rules/react-standards.md` | `*.tsx`, `*.jsx`, `src/store/`, `pages/` |
 | `.claude/rules/vue-standards.md` | `*.vue`, `*.css`, `*.scss`, `composables/`, `views/`, `stores/` |
 | `.claude/rules/python-fastapi-standards.md` | `src/main.py`, `core/`, `*service*`, `*client*`, `*router*` |
 | `.claude/rules/python-django-standards.md` | `config/`, `src/api/`, `src/engine/`, `src/workers/` |
 | `.claude/rules/testing-standards.md` | `tests/**`, `test/**`, `**/test_*`, `**/*_test.*`, `**/*.test.*`, `**/*.spec.*` |
 
-Всегда активны:
+Always active:
 
-| Файл | Когда применять |
-|------|----------------|
-| `.claude/rules/structured-response.md` | рефакторинг, новая фича, архитектура, большой PR |
-| `.claude/rules/dev-workflow.md` | тесты, рефакторинг, безопасность, зависимости |
-| `.claude/rules/gstack-workflow.md` | полный цикл фичи (Think→Plan→Build→Review→Test) |
-| `.claude/rules/git-conventions.md` | коммиты, ветки, PR, merge, любая работа с git |
+| File | When to apply |
+|------|---------------|
+| `.claude/rules/structured-response.md` | refactoring, new feature, architecture, large PR |
+| `.claude/rules/dev-workflow.md` | tests, refactoring, security, dependencies |
+| `.claude/rules/gstack-workflow.md` | full feature cycle (Think→Plan→Build→Review→Test) |
+| `.claude/rules/git-conventions.md` | commits, branches, PRs, merges, any git work |
+| `.claude/rules/external-content.md` | web pages, MCP results, API responses, tickets — anything fetched from outside the repo |

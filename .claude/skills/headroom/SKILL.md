@@ -9,21 +9,21 @@ effort: low
 
 # headroom
 
-Headroom автоматически сжимает большие tool outputs перед передачей в контекст.
+Headroom automatically compresses large tool outputs before they reach the context.
 
-## Команды
+## Commands
 
-- `/headroom` или `/headroom on` — включить
-- `/headroom off` — выключить
+- `/headroom` or `/headroom on` — enable
+- `/headroom off` — disable
 
-## Поведение
+## How it works
 
-Хук `mode-tracker.js` обрабатывает команду и обновляет флаг `~/.claude/.headroom-active` (content: `"on"` или `"off"`) **до** того как модель отвечает.
+The `mode-tracker.js` hook processes the command and updates the `~/.claude/.headroom-active` flag (content: `"on"` or `"off"`) **before** the model replies.
 
-Определи новый статус по намерению пользователя:
+Determine the new status from the user's intent:
 - `/headroom off`, "выключить headroom", "disable headroom" → **OFF**
 - `/headroom on`, `/headroom`, "включить headroom", "enable headroom" → **ON**
 
-Подтверди пользователю:
+Confirm to the user:
 - ON: "Headroom ON. Logs, JSON, search results, command output >100 строк будут сжиматься через headroom_compress."
 - OFF: "Headroom OFF. Авто-сжатие отключено."

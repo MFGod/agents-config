@@ -1,56 +1,56 @@
 ---
-description: Тесты, рефакторинг, безопасность и зависимости. Подключай при задачах на написание тестов, ревью кода, рефакторинг, добавление зависимостей или безопасность.
+description: Tests, refactoring, security, and dependencies. Engage for tasks about writing tests, code review, refactoring, adding dependencies, or security.
 alwaysApply: true
 ---
 <!-- SYNC: .claude/rules/dev-workflow.md -->
 
 # Dev Workflow
 
-## Тестирование
+## Testing
 
-Любое изменение **логики** требует:
-1. Написать/обновить тесты (unit/integration/e2e — по стеку проекта).
-2. Запустить, показать результат (команда + вывод или ошибка).
-3. Тестов нет → предложи минимум, согласуй перед merge.
+Any change to **logic** requires:
+1. Write/update tests (unit/integration/e2e — per the project's stack).
+2. Run them, show the result (command + output or error).
+3. No tests exist → propose a minimum, agree on it before merge.
 
-Без зелёных тестов — не готово. Исключение — только по явной просьбе (зафиксируй).
+Without green tests it is not done. Exception only on explicit request (record it).
 
 ### Python / FastAPI
 
-- Unit-тесты хранить в папке `test/` в корне проекта.
-- Запускать тесты **против экземпляра в Docker Compose**, не на голой машине.
-  - Есть `docker-compose.local.yaml` → использовать его.
-  - Есть `docker-compose.dev.yaml` → использовать его.
-  - Нет ни одного → предупредить пользователя, не запускать локально без явного разрешения.
+- Keep unit tests in the `test/` directory at the project root.
+- Run tests **against the Docker Compose instance**, not on the bare machine.
+  - `docker-compose.local.yaml` exists → use it.
+  - `docker-compose.dev.yaml` exists → use it.
+  - Neither exists → warn the user; do not run locally without explicit permission.
 
-## Рефакторинг
+## Refactoring
 
-**Не создавай без пользы:** helpers/hooks/файлы/константы при 1 использовании; микрообёртки; смешение kebab/camel/snake_case.
+**Do not create without payoff:** helpers/hooks/files/constants used once; micro-wrappers; mixing kebab/camel/snake_case.
 
-**Гейт** — хоть одно «нет» → не рефакторить:
-- проще, меньше когнитивная нагрузка?
-- абстракция оправдана (не «архитектурность»)?
-- навигация не усложнена?
-- соответствует стилю проекта?
+**Gate** — a single "no" → do not refactor:
+- simpler, lower cognitive load?
+- abstraction justified (not "architecture" for its own sake)?
+- navigation not made harder?
+- consistent with the project's style?
 
-## Безопасность
+## Security
 
 - validate input; sanitize external data; avoid secrets in code
-- не логировать: authorization, token, password, secret, api_key
-- HTML из API — только через sanitizer (DOMPurify или аналог)
-- Webhook endpoints — проверка secret/header до разбора body
+- never log: authorization, token, password, secret, api_key
+- HTML from an API — only through a sanitizer (DOMPurify or equivalent)
+- Webhook endpoints — verify secret/header before parsing the body
 
-## Зависимости
+## Dependencies
 
-Новая зависимость — только при необходимости. Предпочти уже используемую. Оцени: maintenance (last release, issues, license), bundle size impact.
+New dependency only on real need. Prefer one already in use. Weigh: maintenance (last release, issues, license), bundle size impact.
 
 ## Auto-Review
 
-После завершения BUILD с изменёнными файлами кода (`.js`, `.ts`, `.py`, `.sh`, `.vue`, `.tsx`):
+After finishing BUILD with changed code files (`.js`, `.ts`, `.py`, `.sh`, `.vue`, `.tsx`):
 
-- **≥2 файлов** → спавни `cavecrew-reviewer` с diff изменённых файлов.
-- **1 файл** → пропускай (PostToolUse хук уже проверил синтаксис).
+- **≥2 files** → spawn `cavecrew-reviewer` with the diff of the changed files.
+- **1 file** → skip (the PostToolUse hook already checked syntax).
 
-Не спавни при: только docs (`.md`), только config (`.json`/`.yaml`), единственный typo fix, активный gstack-workflow (REVIEW фаза сама вызовет reviewer).
+Do not spawn for: docs only (`.md`), config only (`.json`/`.yaml`), a single typo fix, or an active gstack-workflow (the REVIEW phase invokes the reviewer itself).
 
-Prompt для spawn: `"Review modified files for bugs/risks: <список файлов через git diff --stat HEAD>"`
+Spawn prompt: `"Review modified files for bugs/risks: <file list from git diff --stat HEAD>"`

@@ -1,70 +1,69 @@
 ---
-description: Стандарты Vue 3 + Composition API + Pinia. Подключай при работе с *.vue, composables, views (не React).
+description: Vue 3 + Composition API + Pinia standards. Engage when working with *.vue, composables, views (not React).
 globs: "src/**/*.vue,src/**/*.css,src/**/*.scss,src/**/composables/**/*,src/**/views/**/*,src/**/stores/**/*,src/**/components/**/*"
 alwaysApply: false
 ---
-
 <!-- SYNC: .claude/rules/vue-standards.md -->
 
-# Vue-стандарты
+# Vue Standards
 
-Дополняет `global-standards.md`. Для React — `react-standards.mdc`.
+Extends `global-standards.md`. For React — see `react-standards.md`.
 
-**Стек:** Vue 3, TypeScript, JavaScript, HTML5, CSS3/SCSS, Vite/Webpack, REST API, SSR/SSG/SPA/PWA.
+**Stack:** Vue 3, TypeScript, JavaScript, HTML5, CSS3/SCSS, Vite/Webpack, REST API, SSR/SSG/SPA/PWA.
 
-## Архитектура
+## Architecture
 
-Перед изменениями анализируй: component tree, data flow, state dependencies, composables, routing, UI patterns, rendering impact.
+Before making changes, analyze: component tree, data flow, state dependencies, composables, routing, UI patterns, rendering impact.
 
-## Компоненты
+## Components
 
-- Один компонент = одна ответственность. Split smart/dumb. Props: типизированы, минимальны, immutable, explicit defaults.
-- Logic в composables при ≥2 местах использования; иначе inline. Исключение: сложная нетривиальная логика >15 строк — можно вынести при одном месте использования.
-- Никогда: prop drilling >2-3 уровней; giant components; hidden mutations; side effects в render.
+- One component = one responsibility. Split smart/dumb. Props: typed, minimal, immutable, with explicit defaults.
+- Move logic into a composable at ≥2 use sites; otherwise keep it inline. Exception: complex non-trivial logic over 15 lines may be extracted at a single use site.
+- Never: prop drilling beyond 2–3 levels; giant components; hidden mutations; side effects during render.
 
 ## Vue 3
 
 - Composition API + `script setup`; typed props/emits.
-- `computed` для всего синхронного derived state.
-- `watch` только для: async-операций, DOM side effects, внешней синхронизации (localStorage, WebSocket, router).
-- `ref` для primitives, `reactive` для grouped state.
+- `computed` for all synchronous derived state.
+- `watch` only for: async operations, DOM side effects, external synchronization (localStorage, WebSocket, router).
+- `ref` for primitives, `reactive` for grouped state.
 
 ## TypeScript
 
-- `unknown` вместо `any` при работе с внешними данными
-- Явные возвращаемые типы у публичных / экспортируемых функций
-- `interface` для публичных контрактов; `type` для unions и aliases
+- `unknown` instead of `any` when handling external data
+- Explicit return types on public / exported functions
+- `interface` for public contracts; `type` for unions and aliases
 
 ## State management (Pinia)
 
-Предпочитай: local state → composition → composables → Pinia (только если ≥2 несвязанных компонента нуждаются в одних данных).
+Prefer, in order: local state → composition → composables → Pinia (only when ≥2 unrelated components need the same data).
 
-Pinia: мутации state — **только в actions**; из шаблона и внешнего кода — только через actions. Derived state — через `computed` в store.
+Pinia: state mutations happen **in actions only**; templates and external code go through actions. Derived state — via `computed` in the store.
 
-## API и формы
+## API and forms
 
 - Type responses; handle loading/error/empty/retry.
-- Cancellation — `AbortController`: отменяй предыдущий запрос при новом, `controller.abort()` в `onUnmounted`.
-- No fetch в render; no silent failures; no ignored race conditions.
-- Forms: controlled state, validation, error/loading/disabled. Debounce ≥300ms для поисковых полей; throttle для scroll/resize.
+- Cancellation — `AbortController`: abort the previous request when a new one starts, `controller.abort()` in `onUnmounted`.
+- No fetch during render; no silent failures; no ignored race conditions.
+- Forms: controlled state, validation, error/loading/disabled. Debounce ≥300ms on search fields; throttle on scroll/resize.
 
-## Стили
+## Styling
 
 - Reusable styles, design tokens, component isolation, mobile-first.
-- Нет: magic numbers, `!important`, duplicated styles, deep nesting.
+- No: magic numbers, `!important`, duplicated styles, deep nesting.
 
-## Рефакторинг
+## Refactoring
 
-**Не делай:** composable ради однострочной логики; декомпозицию без реальной сложности блока.
+**Don't:** create a composable for one-line logic; decompose a block that isn't actually complex.
 
-## Чеклист
+## Checklist
 
 PERFORMANCE CHECK:
-- Тяжёлые компоненты/роуты lazy (`defineAsyncComponent`/router lazy)?
-- Ненужные ре-рендеры устранены (`v-memo`, `computed`, `shallowRef`)?
-- Bundle size проверен после новой зависимости?
+- Heavy components/routes lazy-loaded (`defineAsyncComponent` / router lazy)?
+- Needless re-renders eliminated (`v-memo`, `computed`, `shallowRef`)?
+- Bundle size checked after adding a dependency?
 
 ACCESSIBILITY CHECK:
-- Интерактивные элементы: `aria-label` или видимый текст?
-- Keyboard nav: Tab, Enter, Escape? Focus management после модала?
-- Семантические теги, не `div` для интерактивного?
+- Interactive elements: `aria-label` or visible text?
+- Keyboard nav: Tab, Enter, Escape? Focus management after a modal closes?
+- Semantic tags, not a `div` standing in for something interactive?

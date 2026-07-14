@@ -1,22 +1,22 @@
 ---
-description: Версия и обновление набора .cursor (Agents-config kit)
+description: Version and update checks for the .cursor kit (Agents-config kit)
 alwaysApply: true
 ---
 
-# Cursor kit — версия
+# Cursor kit — version
 
-**ОБЯЗАТЕЛЬНО перед первой правкой файлов в сессии (Edit/Write/Create).** Нет исключений. Нет отложений. Даже если сессия началась с "привет" — как только дошло до файлов, сначала эти шаги.
+**MANDATORY before the first file edit of the session (Edit/Write/Create).** No exceptions. No deferring. Even if the session opened with "hi" — the moment it reaches files, do these steps first.
 
-1. **Прочитай `.cursor/kit-version`.** (Это шаг первый — до любых правок.) Нет `.cursor/kit-meta.json` → создай `{ "installedAt": "<сегодня ISO 8601>", "kitVersion": "<kit-version>" }`, сообщи одной строкой.
-2. Проверь `lastCheckedAt` в kit-meta.json:
-   - Прошло **< 72ч** → читай `latestVersion` из кэша (kit-meta.json), переходи к п.3.
-   - Нет поля / прошло **≥ 72ч** → выполни в терминале:
+1. **Read `.cursor/kit-version`.** (This is step one — before any edit.) No `.cursor/kit-meta.json` → create `{ "installedAt": "<today, ISO 8601>", "kitVersion": "<kit-version>" }`, report it in one line.
+2. Check `lastCheckedAt` in kit-meta.json:
+   - **< 72h** ago → read `latestVersion` from the cache (kit-meta.json), go to step 3.
+   - Field missing / **≥ 72h** ago → run in the terminal:
      ```
      GITHUB_TOKEN=$(cat .cursor/secrets/github_token 2>/dev/null | grep -v '^#' | tr -d '[:space:]'); curl -sf --max-time 3 -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.raw" -H "User-Agent: agents-config-kit" "https://api.github.com/repos/MFGod/agents-config/contents/.cursor/kit-version?ref=main"
      ```
-     Получи `latestVersion`. Обнови kit-meta.json: добавь/перезапиши `latestVersion` и `lastCheckedAt` (сейчас ISO 8601). Поля `installedAt`, `kitVersion`, `notifiedAt` — не трогай.
-3. Если `latestVersion > kitVersion` (semver: major → minor → patch, 1.10.0 > 1.9.0):
-   - Проверь `notifiedAt` в kit-meta.json.
-   - Нет поля / прошло **≥ 14 дней** → напомни обновить (2–4 предл., укажи версию и ссылку на changelog: `https://github.com/MFGod/agents-config/blob/main/CHANGELOG.md`). Запиши `notifiedAt` = сейчас ISO 8601 в kit-meta.json. Не блокируй.
-   - Прошло **< 14 дней** → молчи.
-4. curl недоступен / ошибка → молчи, не блокируй.
+     Take `latestVersion` from the response. Update kit-meta.json: add/overwrite `latestVersion` and `lastCheckedAt` (now, ISO 8601). Leave `installedAt`, `kitVersion`, `notifiedAt` untouched.
+3. If `latestVersion > kitVersion` (semver: major → minor → patch, 1.10.0 > 1.9.0):
+   - Check `notifiedAt` in kit-meta.json.
+   - Field missing / **≥ 14 days** ago → remind the user to update (2–4 sentences, name the version and link the changelog: `https://github.com/MFGod/agents-config/blob/main/CHANGELOG.md`). Write `notifiedAt` = now (ISO 8601) into kit-meta.json. Do not block.
+   - **< 14 days** ago → stay silent.
+4. curl unavailable / errored → stay silent, do not block.

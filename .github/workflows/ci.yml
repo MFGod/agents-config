@@ -30,10 +30,15 @@ jobs:
           shellcheck -S warning install.sh .claude/hooks/*.sh .cursor/hooks/*.sh
 
       - name: JS syntax (node --check)
+        # Skill scripts run with the agent's rights just like hooks do, so they get the
+        # same syntax gate. This is hygiene, not a security control — it catches broken
+        # code, never malicious code. Integrity of vendored skills is enforced by the
+        # sha256 pin in skills-lock.json (check-skills.js).
         run: |
-          for f in .claude/hooks/*.js .cursor/hooks/*.js; do
+          # .mjs matters: impeccable ships 61 of them and zero plain .js in most subdirs.
+          while IFS= read -r f; do
             node --check "$f"
-          done
+          done < <(find .claude/hooks .cursor/hooks .claude/skills -type f \( -name '*.js' -o -name '*.mjs' \))
 
       - name: Python compile
         run: |
@@ -50,6 +55,10 @@ jobs:
         run: node --test
 
       - name: Python lint (ruff — pyflakes + syntax errors)
+        # Kit-authored scripts only. Vendored skills are pinned by sha256 in
+        # skills-lock.json — linting them to upstream's style would mean patching pinned
+        # files and rebaselining the hash on every upstream nit, which defeats the pin.
+        # Their syntax is covered by the py_compile step above.
         run: |
           python3 -m pip install ruff
           ruff check --select F,E9 --ignore F811 .claude/skills/caveman-compress/scripts/
@@ -66,6 +75,14 @@ jobs:
       - name: Skills check (frontmatter, skills-lock, install.sh, symlinks)
         run: node .claude/scripts/check-skills.js
 
+      - name: Prompt-injection audit of skill/rule/agent content
+        # Static scan of everything the agent reads as instructions. Audits find prompt
+        # injection in roughly a third of public skills, and a vendored skill runs with
+        # the user's rights — so the file is the thing to scan. Signature classes follow
+        # NVIDIA garak's attack taxonomy (latentinjection, xss/exfiltration, promptinject,
+        # encoding); garak itself probes a live model endpoint and cannot audit files.
+        run: node .claude/scripts/audit-skill-content.js
+
       - name: Install smoke test
         run: |
           mkdir -p /tmp/kit-target
@@ -78,8 +95,13 @@ jobs:
           test -f /tmp/kit-target/.claude/skills/ux-core/SKILL.md
           test -f /tmp/kit-target/.cursor/skills/impeccable/SKILL.md
           test -f /tmp/kit-target/.cursor/skills/ux-core/SKILL.md
-          # Rules must land too.
-          test -f /tmp/kit-target/.claude/rules/global-standards.md
+          # Every rule in the repo must reach the target with --stacks all. install.sh
+          # copied "frontend-standards" — a name that has not existed since v0.1.0 — so
+          # Vue users silently got no Vue rule at all. A name list nobody diffs rots.
+          for f in .claude/rules/*.md; do
+            test -f "/tmp/kit-target/$f" || { echo "MISSING in target: $f"; exit 1; }
+          done
           test -f /tmp/kit-target/.cursor/rules/global-standards.mdc
+          test -f /tmp/kit-target/.cursor/rules/external-content.mdc
           # No skill may install as a symlink into a user's project.
           ! find /tmp/kit-target/.claude/skills /tmp/kit-target/.cursor/skills -type l | grep -q .

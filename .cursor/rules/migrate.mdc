@@ -1,5 +1,5 @@
 ---
-description: Безопасный workflow миграций — Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify. Блокирует apply без backup и rollback plan. Подключай при миграциях БД, schema changes, data transforms. alwaysApply: false — через @migrate или явный запрос.
+description: Safe migration workflow — Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify. Blocks apply without a backup and a rollback plan. Engage for DB migrations, schema changes, data transforms. alwaysApply: false — engaged via @migrate or an explicit request.
 alwaysApply: false
 ---
 <!-- SYNC: .claude/skills/migrate/SKILL.md -->
@@ -7,9 +7,9 @@ alwaysApply: false
 ---
 name: migrate
 description: >
-  Безопасный workflow миграций: Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify.
-  Блокирует apply без explicit rollback plan. Работает с DB-миграциями, data transforms,
-  schema changes, API version upgrades. Не запускает миграции без явного OK пользователя.
+  Safe migration workflow: Pre-check (backup?) → Dry-run → Rollback plan → Apply → Verify.
+  Blocks apply without an explicit rollback plan. Covers DB migrations, data transforms,
+  schema changes, API version upgrades. Never runs a migration without an explicit OK from the user.
   Trigger: "/migrate", "запусти миграцию", "migrate", "применить миграцию",
   "schema change", "data migration", "обнови схему", "накати миграцию".
 effort: high
@@ -17,27 +17,27 @@ effort: high
 
 # migrate
 
-Миграции необратимы или дорого откатываются. Не пропускай фазы без явного обоснования.
+Migrations are irreversible or expensive to undo. Do not skip phases without stating why.
 
 ---
 
-## Фаза 1 — Pre-check
+## Phase 1 — Pre-check
 
-До любых действий — собери ответы:
+Before doing anything, gather the answers:
 
-- [ ] **Backup существует?** — ручной snapshot, pg_dump, mysqldump, S3 backup. Если нет — **СТОП**. Спроси пользователя перед продолжением.
-- [ ] **Окружение** — dev / staging / prod? Prod → повышенный риск, явное подтверждение обязательно.
-- [ ] **Downtime нужен?** — ALTER TABLE на большой таблице блокирует, online DDL (pt-online-schema-change, pglogical) или maintenance window?
-- [ ] **Зависимые сервисы** — есть ли сервисы, читающие старую схему прямо сейчас? Backward-compatible ли миграция?
-- [ ] **Тесты зелёные?** — запусти тесты до применения. Красные тесты → не мигрируй.
+- [ ] **Does a backup exist?** — manual snapshot, pg_dump, mysqldump, S3 backup. If not — **STOP**. Ask the user before continuing.
+- [ ] **Which environment** — dev / staging / prod? Prod → elevated risk, explicit confirmation mandatory.
+- [ ] **Is downtime needed?** — an ALTER TABLE on a large table locks it; is this online DDL (pt-online-schema-change, pglogical) or a maintenance window?
+- [ ] **Dependent services** — is anything reading the old schema right now? Is the migration backward-compatible?
+- [ ] **Are tests green?** — run them before applying. Red tests → do not migrate.
 
-**Выход фазы:** все пункты отвечены, backup подтверждён.
+**Phase exit:** every item answered, backup confirmed.
 
 ---
 
-## Фаза 2 — Dry-run
+## Phase 2 — Dry-run
 
-Выполни миграцию в режиме проверки без применения изменений:
+Run the migration in check mode, without applying changes:
 
 ```bash
 # Django
@@ -45,7 +45,7 @@ python manage.py migrate --plan
 python manage.py migrate --check
 
 # Alembic
-alembic upgrade head --sql   # покажет SQL без выполнения
+alembic upgrade head --sql   # prints the SQL without executing it
 
 # Flyway
 flyway validate
@@ -58,71 +58,67 @@ prisma migrate diff --from-schema-datasource --to-schema-datamodel prisma/schema
 knex migrate:latest --dry-run 2>/dev/null || knex migrate:status
 ```
 
-Проверь вывод:
-- [ ] SQL/план выглядит ожидаемо (нет лишних DROP, неожиданных ALTER).
-- [ ] Нет конфликтов с существующими данными (unique constraints, not null без default).
-- [ ] Объём данных к трансформации — ожидаемый (не на порядок больше).
+Check the output:
+- [ ] The SQL/plan looks as expected (no stray DROPs, no unexpected ALTERs).
+- [ ] No conflicts with existing data (unique constraints, NOT NULL without a default).
+- [ ] The volume of data to transform is what you expected (not an order of magnitude more).
 
-**Выход фазы:** dry-run показал ожидаемый результат.
+**Phase exit:** the dry-run produced the expected result.
 
 ---
 
-## Фаза 3 — Rollback Plan
+## Phase 3 — Rollback Plan
 
-**Обязательно перед apply.** Запиши план явно:
+**Mandatory before apply.** Write the plan out explicitly:
 
 ```
 ROLLBACK PLAN:
-1. <команда отката / down-миграция / restore из backup>
-2. <что перезапустить после отката>
-3. <проверка успеха отката>
-Ожидаемое время отката: <X минут>
+1. <rollback command / down migration / restore from backup>
+2. <what to restart afterwards>
+3. <how to verify the rollback succeeded>
+Expected rollback time: <X minutes>
 ```
 
-Типы отката по убыванию предпочтения:
-1. **Down-миграция** (`migrate --rollback`, `alembic downgrade -1`) — идеально, атомарно.
-2. **Restore из backup** — если down-миграция не предусмотрена.
-3. **Ручной SQL** — только если 1 и 2 недоступны; зафиксируй точные команды.
+Rollback options, most preferred first:
+1. **Down migration** (`migrate --rollback`, `alembic downgrade -1`) — ideal, atomic.
+2. **Restore from backup** — when no down migration exists.
+3. **Manual SQL** — only when 1 and 2 are unavailable; record the exact commands.
 
-Если rollback невозможен (необратимая трансформация данных) — **скажи явно** пользователю до apply.
+If rollback is impossible (an irreversible data transform) — **say so explicitly** to the user before apply.
 
-**Выход фазы:** rollback plan записан и показан пользователю.
-
----
-
-## Фаза 4 — Apply
-
-**Только после явного OK пользователя.**
-
-```bash
-# Покажи команду до выполнения, жди подтверждения
-echo "Выполняю: <команда>"
-# затем запускай
-```
-
-Во время apply:
-- [ ] Логи миграции на экране (не запускай в фоне).
-- [ ] При ошибке — **СТОП**, не пытайся исправить на ходу. Переходи к rollback.
-- [ ] Если partial apply (часть выполнилась, часть нет) — зафикси состояние, спроси пользователя.
+**Phase exit:** the rollback plan is written down and shown to the user.
 
 ---
 
-## Фаза 5 — Verify
+## Phase 4 — Apply
 
-После apply:
+**Only after an explicit OK from the user.**
 
-- [ ] **Smoke-check схемы** — `\d tablename` / `DESCRIBE table` / `PRAGMA table_info` — структура соответствует ожидаемой.
-- [ ] **Данные** — выборочная проверка что данные не потеряны / трансформированы корректно.
-- [ ] **Тесты** — запусти тесты снова. Зелёные → миграция успешна.
-- [ ] **Зависимые сервисы** — перезапусти если нужно, проверь что читают новую схему корректно.
+Show the command before running it and wait for confirmation, then run it.
 
-**Выход:** все чекпоинты зелёные → миграция завершена.
+During apply:
+- [ ] Migration logs on screen (do not run it in the background).
+- [ ] On error — **STOP**, do not improvise a fix. Go to rollback.
+- [ ] On a partial apply (some steps ran, some didn't) — record the state, ask the user.
 
 ---
 
-## Экстренный rollback
+## Phase 5 — Verify
 
-Если в Фазе 4–5 что-то пошло не так:
+After apply:
+
+- [ ] **Schema smoke-check** — `\d tablename` / `DESCRIBE table` / `PRAGMA table_info` — the structure matches expectations.
+- [ ] **Data** — spot-check that nothing was lost and transforms are correct.
+- [ ] **Tests** — run them again. Green → the migration succeeded.
+- [ ] **Dependent services** — restart if needed, confirm they read the new schema correctly.
+
+**Exit:** all checkpoints green → migration complete.
+
+---
+
+## Emergency rollback
+
+If something goes wrong in Phase 4–5, tell the user:
 
 ```
 СТОП. ROLLBACK.
@@ -130,4 +126,4 @@ echo "Выполняю: <команда>"
 Выполняю: <rollback plan из Фазы 3>.
 ```
 
-Выполни rollback. Зафикси что произошло. **Не продолжай migrate без нового pre-check.**
+Execute the rollback. Record what happened. **Do not resume the migration without a fresh pre-check.**

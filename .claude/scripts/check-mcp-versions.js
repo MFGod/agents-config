@@ -75,8 +75,42 @@ for (const mcpFile of MCP_FILES) {
   }
 }
 
+// install.sh prints the MCP servers it just wired up. That list is hand-maintained, so it
+// drifts: it advertised `chrome-devtools`, which no mcp.json has ever configured, and it
+// omitted `playwright` from the Cursor list, which .cursor/mcp.json does configure. A user
+// reading either statement is misled about what they actually got.
+const install = fs.readFileSync(path.join(ROOT, 'install.sh'), 'utf8');
+for (const file of MCP_FILES) {
+  const servers = Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8')).mcpServers);
+  const block = install.match(new RegExp(`${file.replace(/[./]/g, '\\$&')}\\):\\\\n"([\\s\\S]*?)\\n  fi`));
+  // Fail closed. If this check cannot find the block it is meant to police, it must say
+  // so — silently skipping would let the very drift it exists to catch back in unseen.
+  if (!block) {
+    console.error(`  ERROR: could not locate the ${file} server list in install.sh — this check can no longer verify it. Fix the pattern or the install.sh block.`);
+    failed++;
+    continue;
+  }
+  const advertised = [...block[1].matchAll(/printf "\s+([\w-]+)\s+—/g)].map(m => m[1]);
+  if (advertised.length === 0) {
+    console.error(`  ERROR: found the ${file} block in install.sh but parsed zero server names from it — the pattern has rotted.`);
+    failed++;
+  }
+  for (const name of advertised) {
+    if (!servers.includes(name)) {
+      console.error(`  ERROR: install.sh advertises MCP server \`${name}\` for ${file}, but it is not configured there`);
+      failed++;
+    }
+  }
+  for (const name of servers) {
+    if (!advertised.includes(name)) {
+      console.error(`  ERROR: ${file} configures \`${name}\`, but install.sh never tells the user about it`);
+      failed++;
+    }
+  }
+}
+
 if (failed > 0) {
-  console.error(`\n${failed} MCP package(s) not found. Update versions in .mcp.json / .cursor/mcp.json`);
+  console.error(`\n${failed} MCP problem(s). Fix versions in .mcp.json / .cursor/mcp.json, or the server list printed by install.sh`);
   process.exit(1);
 }
-console.log('mcp-versions: all packages verified');
+console.log('mcp-versions: all packages verified; install.sh server list matches both mcp.json files');

@@ -1,29 +1,17 @@
 ---
-description: Стандарты качества тестов — AAA структура, именование, что мокировать, изоляция, unit vs integration. Применяй при написании и ревью тестов. Дополняет dev-workflow.mdc (когда писать) — этот файл про КАК писать.
+description: Test quality standards — AAA structure, naming, what to mock, isolation, unit vs integration. Apply when writing and reviewing tests. Extends dev-workflow.mdc (when to write) — this file is about HOW to write.
 globs: ["tests/**", "test/**", "test_*.py", "*_test.py", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx", "*.test.js", "*.spec.js"]
 alwaysApply: false
 ---
 <!-- SYNC: .claude/rules/testing-standards.md -->
 
----
-paths:
-  - "tests/**"
-  - "test/**"
-  - "**/test_*"
-  - "**/*_test.*"
-  - "**/*.test.*"
-  - "**/*.spec.*"
----
-
-<!-- SYNC: .cursor/rules/testing-standards.mdc -->
-
 # Testing Standards
 
-Дополняет `dev-workflow.md` (когда писать тесты). Этот файл — **как** писать хорошие тесты.
+Extends `dev-workflow.md` (when to write tests). This file is **how** to write good ones.
 
-## Структура теста — AAA
+## Test structure — AAA
 
-Каждый тест: **Arrange → Act → Assert**. Три секции, один сценарий.
+Every test: **Arrange → Act → Assert**. Three sections, one scenario.
 
 ```python
 # Python / pytest
@@ -54,11 +42,11 @@ it('reduces sender balance on transfer', () => {
 });
 ```
 
-**Один тест — один сценарий.** Нет: "тест всего метода transfer". Да: "transfer уменьшает баланс отправителя".
+**One test — one scenario.** No: "a test for the whole transfer method". Yes: "transfer reduces the sender's balance".
 
-## Именование
+## Naming
 
-Паттерн: `test_<что>_when_<условие>_then_<ожидание>` (Python) / `'<что> <условие> <ожидание>'` (JS).
+Pattern: `test_<what>_when_<condition>_then_<expectation>` (Python) / `'<what> <condition> <expectation>'` (JS).
 
 ```python
 # Python
@@ -73,44 +61,44 @@ describe('transfer', () => {
 });
 ```
 
-Имя теста — документация. Читая его — понимаешь что сломалось без открытия файла.
+A test's name is documentation. Reading it tells you what broke without opening the file.
 
-## Что мокировать
+## What to mock
 
-**Только внешний I/O:**
+**External I/O only:**
 
-| Мокировать ✅ | Не мокировать ❌ |
+| Mock ✅ | Don't mock ❌ |
 |---|---|
-| HTTP-запросы к внешним API | Бизнес-логику внутри модуля |
-| Запросы к БД (в unit-тестах) | Стандартные библиотеки |
-| FS-операции (чтение/запись файлов) | Простые утилиты и хелперы |
-| Очереди сообщений (Celery, Redis) | Функции без side effects |
-| Email/SMS-отправку | datetime.now() — если не тестируешь время-зависимое |
+| HTTP requests to external APIs | Business logic inside the module |
+| DB queries (in unit tests) | Standard libraries |
+| FS operations (reading/writing files) | Simple utilities and helpers |
+| Message queues (Celery, Redis) | Functions with no side effects |
+| Email/SMS sending | datetime.now() — unless you're testing time-dependent behavior |
 
-**Правило:** если убрать мок и запустить тест — он упадёт из-за сети/FS/БД → мок оправдан. Если тест пройдёт и без мока → мок лишний.
+**Rule:** remove the mock and run the test — if it fails because of network/FS/DB, the mock is justified. If it still passes without the mock, the mock is dead weight.
 
 ```python
-# ✅ Правильно — мок внешнего API
+# ✅ Right — mocking an external API
 def test_send_notification_calls_email_service(mocker):
     mock_send = mocker.patch('myapp.email_service.send')
     send_notification(user_id=1, message='Hello')
     mock_send.assert_called_once_with(to='user@example.com', body='Hello')
 
-# ❌ Неправильно — мок внутренней логики
+# ❌ Wrong — mocking internal logic
 def test_calculate_discount(mocker):
-    mocker.patch('myapp.pricing.apply_tier')  # зачем? это внутренняя функция
+    mocker.patch('myapp.pricing.apply_tier')  # why? this is an internal function
     ...
 ```
 
-## Изоляция
+## Isolation
 
-- **Нет общего mutable state** между тестами. Каждый тест независим.
-- **Нет порядковой зависимости** — тест B не должен требовать чтобы тест A прошёл первым.
-- **Фикстуры** вместо `setUp`/`tearDown` там где это поддерживается (pytest fixtures, beforeEach).
-- **Временные данные** — создавай в тесте, удаляй после. Никогда не используй prod/staging данные.
+- **No shared mutable state** between tests. Every test is independent.
+- **No ordering dependency** — test B must not require test A to have run first.
+- **Fixtures** instead of `setUp`/`tearDown` where supported (pytest fixtures, beforeEach).
+- **Temporary data** — create it in the test, delete it afterwards. Never use prod/staging data.
 
 ```python
-# pytest fixture — правильная изоляция
+# pytest fixture — proper isolation
 @pytest.fixture
 def account():
     return Account(balance=100, owner='Alice')
@@ -122,41 +110,41 @@ def test_deposit_increases_balance(account):
 def test_withdraw_decreases_balance(account):
     account.withdraw(30)
     assert account.balance == 70
-# Оба теста получают свежий account, не влияют друг на друга
+# Both tests get a fresh account and cannot affect each other
 ```
 
-## Что НЕ тестировать
+## What NOT to test
 
-- **Приватные методы** — тестируй через публичный интерфейс. Если приватное сложно покрыть — это сигнал рефакторинга.
-- **Тривиальные геттеры/сеттеры** без логики.
-- **Framework internals** — ORM, HTTP-клиент, сам pytest/jest.
-- **Конфигурацию** — настройки, env vars, константы.
-- **Код который ты не написал** — сторонние библиотеки.
+- **Private methods** — test them through the public interface. If a private is hard to cover, that's a refactoring signal.
+- **Trivial getters/setters** with no logic.
+- **Framework internals** — the ORM, the HTTP client, pytest/jest themselves.
+- **Configuration** — settings, env vars, constants.
+- **Code you didn't write** — third-party libraries.
 
 ## Unit vs Integration
 
 | Unit | Integration |
 |---|---|
-| Одна функция / класс | Несколько слоёв (API → сервис → БД) |
-| Все внешние зависимости замоканы | Реальная БД / реальный Redis |
-| Миллисекунды | Секунды |
-| Тестирует логику | Тестирует взаимодействие |
-| Первый барьер | Второй барьер |
+| One function / class | Several layers (API → service → DB) |
+| All external dependencies mocked | Real DB / real Redis |
+| Milliseconds | Seconds |
+| Tests logic | Tests interaction |
+| First barrier | Second barrier |
 
-**Правило 80/20:** 80% unit, 20% integration. Интеграционные тесты — только для критичных путей (auth, платежи, core business flow).
+**The 80/20 rule:** 80% unit, 20% integration. Integration tests for critical paths only (auth, payments, core business flow).
 
 ## Coverage
 
-- **Цель не 100%** — цель: покрыть все ветви бизнес-логики и edge cases.
-- **Red flag:** coverage 95%+ но все тесты тривиальные → coverage как метрика не работает.
-- **Что точно покрывать:** error paths, граничные значения, happy path, side effects.
-- **Что не гнаться покрывать:** конфигурационные файлы, auto-generated код, migrations.
+- **The goal is not 100%** — the goal is covering every branch of business logic and the edge cases.
+- **Red flag:** coverage of 95%+ with all tests trivial → coverage has stopped working as a metric.
+- **Definitely cover:** error paths, boundary values, the happy path, side effects.
+- **Don't chase coverage on:** configuration files, auto-generated code, migrations.
 
-## Фреймворки по стеку
+## Frameworks by stack
 
-| Стек | Unit | Integration | Assertions |
+| Stack | Unit | Integration | Assertions |
 |---|---|---|---|
-| Python | pytest | pytest + реальная БД | assert, pytest.raises |
+| Python | pytest | pytest + real DB | assert, pytest.raises |
 | FastAPI | pytest + TestClient | pytest + TestClient | assert response.status_code |
 | JavaScript/TS | vitest / jest | supertest | expect().toBe/toEqual |
 | Vue | vitest + @vue/test-utils | Playwright | expect().toContain |

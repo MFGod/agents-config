@@ -1,3 +1,15 @@
+---
+name: cavecrew
+description: >
+  Decision guide for delegating to caveman-style subagents (investigator / builder /
+  reviewer / tester), whose output is caveman-compressed so the main context lasts longer.
+  Explicit-invoke only — when to spawn a reviewer is already covered by the always-active
+  `dev-workflow` (Auto-Review) and `gstack-workflow` (subagent hooks) rules; this skill is
+  the detailed reference behind them, not a second voice in auto-selection.
+disable-model-invocation: true
+effort: low
+---
+
 <!--
 FROZEN SOURCE
 
@@ -17,20 +29,6 @@ Before making changes:
 Do not refactor, simplify, optimize, or rewrite this file
 without understanding the original implementation and its intent.
 -->
----
-name: cavecrew
-description: >
-  Decision guide for delegating to caveman-style subagents. Tells the main
-  thread WHEN to spawn `cavecrew-investigator` (locate code), `cavecrew-builder`
-  (1-2 file edit), or `cavecrew-reviewer` (diff review) instead of doing the
-  work inline or using vanilla `Explore`. Subagent output is caveman-compressed
-  so the tool-result injected back into main context is ~60% smaller — main
-  context lasts longer across long sessions.
-  Trigger: "delegate to subagent", "use cavecrew", "spawn investigator/builder/reviewer/tester",
-  "save context", "compressed agent output", "write tests", "cover this function".
-effort: low
----
-
 Cavecrew = three subagent presets that emit caveman output. Same job as Anthropic defaults (`Explore`, edit-style agents, reviewer); difference is the tool-result they return is compressed, so main context shrinks per delegation.
 
 ## When to use cavecrew vs alternatives

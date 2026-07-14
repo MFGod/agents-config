@@ -1,3 +1,13 @@
+---
+name: caveman-review
+description: >
+  Ultra-compressed code review comments. Cuts noise from PR feedback while preserving
+  the actionable signal. Each comment is one line: location, problem, fix. Use when user
+  says "review this PR", "code review", "review the diff", "/review", or invokes
+  /caveman-review. Auto-triggers when reviewing pull requests.
+effort: medium
+---
+
 <!--
 FROZEN SOURCE
 
@@ -17,16 +27,6 @@ Before making changes:
 Do not refactor, simplify, optimize, or rewrite this file
 without understanding the original implementation and its intent.
 -->
----
-name: caveman-review
-description: >
-  Ultra-compressed code review comments. Cuts noise from PR feedback while preserving
-  the actionable signal. Each comment is one line: location, problem, fix. Use when user
-  says "review this PR", "code review", "review the diff", "/review", or invokes
-  /caveman-review. Auto-triggers when reviewing pull requests.
-effort: medium
----
-
 Changed files:
 !`git diff --stat HEAD`
 

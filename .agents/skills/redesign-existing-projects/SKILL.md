@@ -1,6 +1,7 @@
 ---
 name: redesign-existing-projects
-description: Upgrades existing websites and apps to premium quality. Audits current design, identifies generic AI patterns, and applies high-end design standards without breaking functionality. Works with any CSS framework or vanilla CSS.
+description: Upgrades existing websites and apps to premium quality. Audits current design, identifies generic AI patterns, and applies high-end design standards without breaking functionality. Works with any CSS framework or vanilla CSS. Explicit-invoke only — upgrading an existing site is a deliberate call; the default UI entry point is `impeccable`.
+disable-model-invocation: true
 ---
 
 # Redesign Skill

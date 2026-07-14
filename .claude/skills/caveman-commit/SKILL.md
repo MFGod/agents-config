@@ -1,3 +1,15 @@
+---
+name: caveman-commit
+description: >
+  Ultra-compressed commit message generator. Cuts noise from commit messages while preserving
+  intent and reasoning. Conventional Commits format. Subject ≤50 chars, body only when "why"
+  isn't obvious. Use when user says "write a commit", "commit message", "generate commit",
+  "/commit", or invokes /caveman-commit. Auto-triggers when staging changes.
+effort: low
+disable-model-invocation: true
+allowed-tools: Bash(git *)
+---
+
 <!--
 FROZEN SOURCE
 
@@ -17,18 +29,6 @@ Before making changes:
 Do not refactor, simplify, optimize, or rewrite this file
 without understanding the original implementation and its intent.
 -->
----
-name: caveman-commit
-description: >
-  Ultra-compressed commit message generator. Cuts noise from commit messages while preserving
-  intent and reasoning. Conventional Commits format. Subject ≤50 chars, body only when "why"
-  isn't obvious. Use when user says "write a commit", "commit message", "generate commit",
-  "/commit", or invokes /caveman-commit. Auto-triggers when staging changes.
-effort: low
-disable-model-invocation: true
-allowed-tools: Bash(git *)
----
-
 Staged changes:
 !`git diff --cached`
 

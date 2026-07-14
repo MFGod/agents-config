@@ -1,0 +1,29 @@
+{
+  "_comment": "Matches from audit-skill-content.js that a human read in full and judged benign. Anchored to the sha256 of the matched line: the exception survives the line moving, but dies the moment its content changes — so nobody can edit malicious text in under an approved exception. Reviewed 2026-07-14.",
+  "reviewed": [
+    {
+      "id": "instruction-override",
+      "lineSha256": "1c6fc36a629ba9b222aa311559858b63804e0afabc8bf13e68df3a776b5f2601",
+      "file": ".claude/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
+      "reason": "Our own anti-injection rule, quoting the attacker's phrasing as an example of what to REFUSE. The line teaches the agent to report such text, not to obey it."
+    },
+    {
+      "id": "concealment",
+      "lineSha256": "b13954a29d5ea3f1992e3fb9103d375ed273b39763d09eca6a11185551288b47",
+      "file": ".claude/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
+      "reason": "Same rule, same purpose: lists \"do not tell the user\" among the phrases that are a FINDING TO REPORT. Quoting an attack is not performing it."
+    },
+    {
+      "id": "concealment",
+      "lineSha256": "4c3f64216440e4cb13786462d9de6c0a1c627c1afb35e9dfb2f33a6aeea078bd",
+      "file": ".claude/skills/impeccable/reference/critique.md (and the .cursor copy)",
+      "reason": "Read in full: 'Do not show the user the helper's JSON output; only the human-readable trend line and the written path.' This suppresses raw JSON noise in favour of a readable summary — the result and the file path ARE shown. It hides formatting, not actions."
+    },
+    {
+      "id": "credential-access",
+      "lineSha256": "1beb371ac11c88733c307f003424603efe8db450069a451b0528505abc9bb47c",
+      "file": ".claude/skills/impeccable/scripts/live-copy-edit-agent.mjs (and the .cursor copy)",
+      "reason": "Read in full: a diagnostic message printed TO THE USER explaining why a no-TTY subprocess cannot reach their own `claude /login` credentials in the macOS Keychain, and how to fix it (`claude setup-token`). It neither reads nor transmits any credential; it explains an auth failure."
+    }
+  ]
+}
