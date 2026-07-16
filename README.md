@@ -1,4 +1,4 @@
-# Agents-config v0.4.0
+# Agents-config v0.5.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platforms: Claude Code + Cursor](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Cursor-blue)](#)
@@ -25,6 +25,7 @@
 | **Design skills** | `/ui-ux-pro-max` — 67 стилей, 96 палитр, 57 font-пар; `/ux-core` — 105 когнитивных биасов как обоснование UX-решений |
 | **UX Review hook** | `PostToolUse` хук: автоматически задаёт 6 UX-вопросов при редактировании `.tsx / .vue / .html / .css / .scss / .svelte` |
 | **Vendored design skills** | `impeccable` (Paul Bakaus) — **единственная точка входа, которую модель выбирает сама**: craft/audit/critique/polish/harden/animate. Нишевые — `explicit-only` (`disable-model-invocation`), вызываются по имени: `taste-skill` x5 (leonxlnx) — `/design-taste-frontend` (новые лендинги), `/redesign-existing-projects`, `/high-end-visual-design`, `/minimalist-ui`, `/industrial-brutalist-ui`; `/emil-design-eng` (emilkowalski, MIT) — UI polish + решение «нужна ли анимация». Explicit-only убирает их `description` из контекста **каждой** сессии и прекращает конкуренцию с `impeccable` в автовыборе — routing-таблица в [`CLAUDE.md`](CLAUDE.md) |
+| **Writing skill** | `humanizer` (blader/humanizer, MIT) — убирает признаки ИИ-текста по гайду Wikipedia «Signs of AI writing» (клише, em dash, inflated symbolism и др.). Только Claude Code. `explicit-only` (`disable-model-invocation`) — переписывание «под человека» не выбирается моделью само |
 | **Цепочка поставки скиллов** | Скилл — не текст, а инструкции, исполняемые **с правами пользователя**. [`skills-lock.json`](skills-lock.json) пинит sha256 **каждого файла** скилла: `SKILL.md`, `scripts/` (код, который выполнится) и `references/` (инструкции, которым агент подчинится). CI fail-closed: незапиненный или изменённый файл роняет сборку (`check-skills.js`). Приёмка стороннего скилла — чеклист в [`SECURITY.md`](SECURITY.md) |
 | **Аудит на prompt injection** | `audit-skill-content.js` статически сканирует всё, что агент читает как инструкции (скиллы, правила, агенты) по таксономии атак [garak](https://github.com/NVIDIA/garak): latentinjection, exfiltration, promptinject, encoding. HIGH роняет CI; безобидные совпадения заносятся в allowlist **по sha256 строки** — одобренное исключение умирает в момент изменения своей строки |
 | **Внешние тулы (опционально)** | `install.sh --with-tools`: `skillspector` (NVIDIA, security-скан скиллов), `codebase-memory-mcp` (code-graph MCP), `agent-reach` (web-доступ для агента), Paper MCP, `dcg` (destructive command guard — хард-блок `rm -rf` / `reset --hard` / force push / `DROP TABLE` до запуска, PreToolUse-хук поверх kit NEVER-list) — каждый со своим y/N |

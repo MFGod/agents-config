@@ -9,6 +9,12 @@
 
 ---
 
+## [0.5.0] — 2026-07-16
+
+### Added
+
+- **Skill `humanizer`** (blader/humanizer, MIT, коммит `1b48564`) — убирает признаки ИИ-текста (клише «это не X, а Y», em dash, inflated symbolism и др. по гайду Wikipedia «Signs of AI writing»). Только Claude Code. `disable-model-invocation: true` — переписывание текста «под человека» модель не выбирает сама, только по явному запросу.
+
 ## [0.4.0] — 2026-07-14
 
 ### Added

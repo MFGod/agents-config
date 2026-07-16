@@ -351,7 +351,7 @@ install_claude_core() {
 
   # impeccable живёт прямо здесь, без symlink в .agents/: npx impeccable генерирует
   # harness-специфичную сборку, одним файлом два харнесса не обслужить.
-  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max impeccable; do
+  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max impeccable humanizer; do
     copy_dir "$SCRIPT_DIR/.claude/skills/$skill" "$TARGET/.claude/skills/$skill"
   done
 
