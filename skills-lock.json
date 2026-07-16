@@ -104,6 +104,14 @@
       "computedHash": "f738987a6a3607915af065dafea03580a6b89f9ef70139c49f038b009b172288",
       "note": "Revision 2026-07: set disable-model-invocation — deliberate call, was competing with impeccable in auto-selection."
     },
+    "humanizer": {
+      "source": "blader/humanizer",
+      "sourceType": "github",
+      "sourceRef": "1b48564898e999219882660237fde01bf4843a0f",
+      "skillPath": ".claude/skills/humanizer/SKILL.md",
+      "computedHash": "c9c26cc937a74d1e0f6b369a42f9f78c610c3db44d9598babd6a6c25e5878166",
+      "note": "Vendored 2026-07-16. Reviewed in full: SKILL.md is a stylistic editing prompt (Wikipedia 'Signs of AI writing' patterns), no scripts/ or references/ directory, no instructions directed at the agent, no network/secret access. allowed-tools limited to Read/Write/Edit/Grep/Glob/AskUserQuestion. Kit modification: added disable-model-invocation: true — rewriting prose to sound more human is a deliberate, narrow-purpose action the model should not auto-select on ordinary editing requests."
+    },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "npm",
