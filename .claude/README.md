@@ -104,7 +104,7 @@ SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToo
 | **RTK** | [rtk-ai/rtk](https://github.com/rtk-ai/rtk) | Сжимает Bash-output (git, ls, тесты) | `rtk rewrite` в PreToolUse через `rtk-rewrite.sh` |
 
 > **RTK и `rtk init -g`:** не запускай `rtk init -g` поверх этой конфигурации. Официальный установщик удалит `rtk-rewrite.sh` и перепишет `settings.json`, конфликтуя с toggle-механизмом (`/rtk on`/`off`). Если нужна чистая RTK-инсталляция — сначала удали интеграцию из `settings.json` вручную.
-| **Caveman** | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | Сжимает output модели ~75% | SessionStart (`session-activate.js`) + UserPromptSubmit (`mode-tracker.js`) |
+| **Caveman** | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | Сжимает output модели 65% (замер апстрима) | SessionStart (`session-activate.js`) + UserPromptSubmit (`mode-tracker.js`) |
 | **Headroom** | [chopratejas/headroom](https://github.com/chopratejas/headroom) | Сжимает tool outputs (MCP) | `.mcp.json` → `headroom_compress` / `headroom_retrieve` |
 
 Наши отклонения от официальных инструментов минимальны и обоснованы:

@@ -13,10 +13,10 @@
     "caveman": {
       "source": "JuliusBrussee/caveman",
       "sourceType": "github",
-      "sourceRef": "25d22f864ad68cc447a4cb93aefde918aa4aec9f",
+      "sourceRef": "ae405e872270acc57484693612ae038b16c8f6cd",
       "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "90631d05f8b64b20503b86df3d9fe24a3b3d5fc144de7a8d7f51f9b325dfff4e",
-      "note": "Kit modification: prose aligned to the kit's language. The skill carries a FROZEN SOURCE header with origin/commit but was previously unpinned — its executable code and instructions could change without CI noticing. Revision 2026-07: FROZEN SOURCE comment moved below the frontmatter — it sat above it, so the loader never parsed the YAML block: the description reached the model as the literal \"<!--\" and disable-model-invocation was ignored. check-skills.js now asserts frontmatter starts at line 1."
+      "computedHash": "4907724ed38556a1f9c698e78ff9df1bf47fcaecedb5a7dad2a1a1696b57a013",
+      "note": "Kit modification: prose aligned to the kit's language. The skill carries a FROZEN SOURCE header with origin/commit but was previously unpinned — its executable code and instructions could change without CI noticing. Revision 2026-07: FROZEN SOURCE comment moved below the frontmatter — it sat above it, so the loader never parsed the YAML block: the description reached the model as the literal \"<!--\" and disable-model-invocation was ignored. check-skills.js now asserts frontmatter starts at line 1. Revision 2026-08: re-synced against upstream ae405e8. Taken: the measured savings figure (65% output tokens, not ~75%), the anti-abbreviation and anti-arrow rules (upstream measured cfg/impl/req/res/fn and → as zero-saving under the tokenizer, so the old `ultra` row was instructing a net-negative habit), the never-drop-negation/units guard, the never-pad-to-sound-caveman rule, the format-not-language note on the warning example, and the widened Boundaries clause (anything persisted outside chat — commits, docs, issues, memory files — stays normal prose). NOT taken: the wenyan-* levels and the tool-narration / self-reference / language-preservation paragraphs, which this kit removed deliberately and which upstream re-expanded."
     },
     "caveman-commit": {
       "source": "JuliusBrussee/caveman",
@@ -91,10 +91,10 @@
     "emil-design-eng": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
-      "sourceRef": "7bb7061b5cf7de15ea1aeaf00fbd9e6592a20fce",
+      "sourceRef": "e879241fab3cdb22e8d95587cdbf40b57a88d7da",
       "skillPath": "skills/emil-design-eng/SKILL.md",
-      "computedHash": "7a830fb6c9916b9c16e3ec1c20feb4fd73a4ae1b7b6f943e564fc3ae65dd6b63",
-      "note": "Revision 2026-07: set disable-model-invocation — overlaps impeccable's polish/animate subcommands."
+      "computedHash": "d6bb1389d431e5a67eca2eb54477e7288a297823a4793e82e7d4efaa17350406",
+      "note": "Revision 2026-07: set disable-model-invocation — overlaps impeccable's polish/animate subcommands. Revision 2026-08: updated to upstream e879241. Upstream dropped the Radix-specific `--radix-popover-content-transform-origin` guidance in favour of Base UI's `var(--transform-origin)`; no other behavior change. Kit modifications unchanged (explicit-invoke description tail + disable-model-invocation)."
     },
     "high-end-visual-design": {
       "source": "Leonxlnx/taste-skill",
@@ -107,10 +107,10 @@
     "humanizer": {
       "source": "blader/humanizer",
       "sourceType": "github",
-      "sourceRef": "1b48564898e999219882660237fde01bf4843a0f",
+      "sourceRef": "ebf637bdae86b62a7b006c447bb98cfa0ccc979d",
       "skillPath": ".claude/skills/humanizer/SKILL.md",
-      "computedHash": "c9c26cc937a74d1e0f6b369a42f9f78c610c3db44d9598babd6a6c25e5878166",
-      "note": "Vendored 2026-07-16. Reviewed in full: SKILL.md is a stylistic editing prompt (Wikipedia 'Signs of AI writing' patterns), no scripts/ or references/ directory, no instructions directed at the agent, no network/secret access. allowed-tools limited to Read/Write/Edit/Grep/Glob/AskUserQuestion. Kit modification: added disable-model-invocation: true — rewriting prose to sound more human is a deliberate, narrow-purpose action the model should not auto-select on ordinary editing requests."
+      "computedHash": "f5522e91bf076717d82b69578c8957a182c2826fe42c9d1511365759aef06374",
+      "note": "Vendored 2026-07-16, updated to upstream v2.11.1 on 2026-08-18. Diff 1b48564..ebf637b reviewed in full: upstream rewrote SKILL.md in Plain Language and grew the pattern list from 26 to 35 (false-positive guard, no-fabrication rule, return modes). Still a stylistic editing prompt with no scripts/ or references/ directory, no instructions directed at the agent, no network/secret access. Upstream added scripts/ at repo root (packaging tooling for Claude Desktop ZIPs) — not part of the skill, not vendored. Kit modifications: (1) allowed-tools limited to Read/Write/Edit/Grep/Glob/AskUserQuestion — upstream dropped the field in 2.9.1 for cross-agent portability, the kit keeps it as least-privilege; (2) disable-model-invocation: true — rewriting prose to sound more human is a deliberate, narrow-purpose action the model should not auto-select on ordinary editing requests."
     },
     "impeccable": {
       "source": "pbakaus/impeccable",
