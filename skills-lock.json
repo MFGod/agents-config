@@ -91,10 +91,10 @@
     "emil-design-eng": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
-      "sourceRef": "e879241fab3cdb22e8d95587cdbf40b57a88d7da",
+      "sourceRef": "2d228630ba1446365f614a108cb8252f1feda202",
       "skillPath": "skills/emil-design-eng/SKILL.md",
-      "computedHash": "d6bb1389d431e5a67eca2eb54477e7288a297823a4793e82e7d4efaa17350406",
-      "note": "Revision 2026-07: set disable-model-invocation — overlaps impeccable's polish/animate subcommands. Revision 2026-08: updated to upstream e879241. Upstream dropped the Radix-specific `--radix-popover-content-transform-origin` guidance in favour of Base UI's `var(--transform-origin)`; no other behavior change. Kit modifications unchanged (explicit-invoke description tail + disable-model-invocation)."
+      "computedHash": "4c0cb391927c632fef1d688a684b09ac4cbd586c058a6fa448ef458e4ea9fcbd",
+      "note": "Revision 2026-07: set disable-model-invocation — overlaps impeccable's polish/animate subcommands. Revision 2026-08: updated to upstream e879241. Upstream dropped the Radix-specific `--radix-popover-content-transform-origin` guidance in favour of Base UI's `var(--transform-origin)`; no other behavior change. Kit modifications unchanged (explicit-invoke description tail + disable-model-invocation). Revision 2026-10-18: updated to upstream 2d22863; upstream only dropped the animations.dev course plug from the intro, no behavior change."
     },
     "high-end-visual-design": {
       "source": "Leonxlnx/taste-skill",
@@ -330,10 +330,10 @@
     "minimalist-ui": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
-      "sourceRef": "b17742737e796305d829b3ad39eda3add0d79060",
+      "sourceRef": "f624f37a8c650b9cc550253104925efe4c8de246",
       "skillPath": "skills/minimalist-skill/SKILL.md",
-      "computedHash": "1c62d60edc53abb43f64d32e85e9e7ee5ed7b717f7a2d176a836142beef018b4",
-      "note": "Kit modification: added disable-model-invocation: true and a trailing clause in the description — a committed visual direction must not enter the model's auto-selection, only explicit user invocation."
+      "computedHash": "92159edea826b61e945e0f2a25f760847daf904b4a4e3e63fd01c035e322e93d",
+      "note": "Kit modification: added disable-model-invocation: true and a trailing clause in the description — a committed visual direction must not enter the model's auto-selection, only explicit user invocation. Revision 2026-10-18: updated to upstream f624f37; upstream added a mandatory prefers-reduced-motion rule for scroll-entry, staggered and ambient motion."
     },
     "prompt-library": {
       "source": "anthropic/code.claude.com/docs/en/prompt-library",
@@ -348,21 +348,21 @@
     "redesign-existing-projects": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
-      "sourceRef": "b17742737e796305d829b3ad39eda3add0d79060",
+      "sourceRef": "f624f37a8c650b9cc550253104925efe4c8de246",
       "skillPath": "skills/redesign-skill/SKILL.md",
-      "computedHash": "3bc816238958d2558045aaf49453a7d8abe5226fdc4b2f7ca51af99e3d79a4c7",
-      "note": "Revision 2026-07: set disable-model-invocation — deliberate call, was competing with impeccable in auto-selection."
+      "computedHash": "b290976c7c634bbac4c7d3fe63f83e65ec5a9b6e5d26212d067656c4a871ac24",
+      "note": "Revision 2026-07: set disable-model-invocation — deliberate call, was competing with impeccable in auto-selection. Revision 2026-10-18: updated to upstream f624f37; upstream softened the always-left-sidebar rule and added collapsible icon-rail guidance (labels in DOM, 44x44 targets, aria-expanded, inert handling for collapsed content)."
     },
     "self-learning": {
       "source": "Kulaxyz/self-learning-skills",
       "sourceType": "github",
-      "sourceRef": "d4e0a7ec1f1ae1b5c7f7972b52ad8ed0c2c067ae",
+      "sourceRef": "1304fce375b5d4c4508cab9eea05bbb8b95c38f6",
       "skillPath": "skills/self-learning/SKILL.md",
-      "computedHash": "a311664dc257aa3488fef88cf63c09e1a3a6afbb087796ea6798e5af7ba0cf98",
-      "note": "Kit modification: (1) added step 7 (prune on contradiction — a stale golden path gets deleted rather than left to mislead) plus a gotcha about growth without pruning; upstream only creates and updates skills, the revision procedure lives in CLAUDE.md / .cursor/AGENTS.md. (2) skill paths aligned to the kit's harnesses — Claude Code (.claude/skills) and Cursor (.cursor/skills); upstream named directories of unsupported harnesses, so the agent would look for and write skills where the project has none. Revision 2026-07: description trimmed from 956 chars; proactive auto-invocation kept.",
+      "computedHash": "6c120b545ac8bf567063ab7ddd441c280ce594649f8dc30478822e0863059e26",
+      "note": "Kit modification: (1) added step 7 (prune on contradiction — a stale golden path gets deleted rather than left to mislead) plus a gotcha about growth without pruning; upstream only creates and updates skills, the revision procedure lives in CLAUDE.md / .cursor/AGENTS.md. (2) skill paths aligned to the kit's harnesses — Claude Code (.claude/skills) and Cursor (.cursor/skills); upstream named directories of unsupported harnesses, so the agent would look for and write skills where the project has none. Revision 2026-07: description trimmed from 956 chars; proactive auto-invocation kept. Revision 2026-10-18: updated to upstream 1304fce; upstream added a pre-write secret self-audit to the gotchas and a matching checklist item in references/skill-authoring.md. Kit modifications unchanged.",
       "fileHashes": {
         "assets/SKILL.template.md": "c5e6a0a6a795a8f22b1eaf4d4efeb2980f35731fa3a4019fda83689d204e5cc6",
-        "references/skill-authoring.md": "95469c172b59e41b34e1a9eaded39cf68de074ca17e2eca7af5300d569f2ee23"
+        "references/skill-authoring.md": "1d99d25164f2547e3db95dc599dff59a147ebd37605625908a992f6e42e9fac4"
       }
     },
     "ui-ux-pro-max": {
