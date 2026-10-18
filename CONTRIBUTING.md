@@ -4,7 +4,7 @@
 
 ## Что это за репозиторий
 
-Это **конфигурационный kit** для AI-агентов (Claude Code + Cursor): правила кодирования, skills, хуки жизненного цикла. Прикладного кода нет — только конфигурация, которая устанавливается в целевые проекты через [`install.sh`](install.sh).
+Это **конфигурационный kit** для Claude Code, Codex и Cursor: общие инструкции и skills, клиентские правила и хуки. Поставка устанавливается через [`install.sh`](install.sh).
 
 ## Перед началом
 
@@ -18,13 +18,11 @@
    <type>-<id>-<короткое-описание>
    ```
    Пример: `feat-12-add-go-standards`.
-2. Внеси изменения. **Source of truth — `.claude/`**; правила Cursor (`.cursor/rules/*.mdc`) синхронизируются вручную (см. [`.cursor/rules/cursor-kit-maintenance.mdc`](.cursor/rules/cursor-kit-maintenance.mdc)).
-3. Подними версию kit **в обоих** файлах: [`.claude/kit-version`](.claude/kit-version) и [`.cursor/kit-version`](.cursor/kit-version) (Semantic Versioning).
+2. Внеси изменения. Общие инструкции — `AGENTS.md`, skills — `.agents/skills/`. `.claude/skills/` содержит адаптеры; архив исходных impeccable variants — `.agents/variants/`, вне discovery. Общий текст правил — `.claude/rules/`; Cursor `.mdc` синхронизируются и проверяются отдельно.
+3. Подними версию [.claude/kit-version](.claude/kit-version) и `package.json` (Semantic Versioning); `.cursor/kit-version` — ссылка на общий номер.
 4. Добавь запись в [`CHANGELOG.md`](CHANGELOG.md) (формат Keep a Changelog).
-5. Прогони тесты, валидаторы и установку — то же, что проверяет CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+5. Прогони валидаторы и установку — то же, что проверяет CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
    ```bash
-   npm test                                    # node --test (хуки: safety-guard, caveman-stats)
-   python3 -m unittest discover -s test        # python-хуки
    node .claude/scripts/check-skills.js        # frontmatter, skills-lock, install.sh, симлинки
    node .claude/scripts/check-cursor-sync.js   # .claude/rules ↔ .cursor/rules
    node .claude/scripts/check-mcp-versions.js  # MCP-пакеты существуют, списки совпадают
@@ -45,7 +43,8 @@
 - **Один PR = одно логическое изменение.** Не смешивай фичи.
 - **Размер PR** ≤400 строк diff (исключение: auto-generated, lockfiles).
 - **Описание PR**: что изменено, почему, как проверить.
-- При добавлении нового skill / rule / hook — пропиши его в [`install.sh`](install.sh) и в [`README.md`](README.md). Для скиллов это не пожелание: `check-skills.js` роняет CI, если скилл не заявлен в `install.sh` или не запинен в `skills-lock.json`.
+- При добавлении skill / rule / hook обнови поставку и [`README.md`](README.md). Общие skills обнаруживаются installer из `.agents/skills/`; их имена, метаданные, адаптеры, explicit-only policy и provenance проверяет `check-skills.js`.
+- В lock сохраняй upstream `skillPath`, а локальный источник указывай в `localPath`. Сторонний payload и архивные variants должны быть полностью запинены; перенос не разрешает сбрасывать проверки целостности.
 
 ## Секреты
 

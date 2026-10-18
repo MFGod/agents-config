@@ -1,266 +1,294 @@
 #!/usr/bin/env node
-// Validates the skill tree against the invariants the kit relies on:
-//   1. Every SKILL.md has `name:` equal to its directory, plus a `description:`.
-//      A mismatched name silently fails to load in both Claude Code and Cursor.
-//   2. Every vendored skill (.agents/skills/) has a skills-lock.json record, and
-//      every lock record points at a skill that still exists — so a deleted skill
-//      can't leave a dangling provenance entry, and a new one can't skip the lock.
-//   3. Every locked skill's SKILL.md still hashes to its `computedHash`. Vendored
-//      skills are third-party code that the agent executes with the user's rights;
-//      without this check the lock records provenance but enforces nothing, and a
-//      skill can be swapped after review (a rug pull) with CI staying green.
-//   4. Every skill install.sh copies actually exists on disk.
-//   5. .claude/skills symlinks resolve.
-// Exits 1 on any violation.
+// Kit invariants: one canonical skill tree, explicitly pinned harness variants,
+// relative same-name adapters, and matching Codex invocation policy.
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const ROOT = path.join(__dirname, '..', '..');
-const AGENTS_SKILLS = path.join(ROOT, '.agents', 'skills');
-const CLAUDE_SKILLS = path.join(ROOT, '.claude', 'skills');
-const CURSOR_SKILLS = path.join(ROOT, '.cursor', 'skills');
-const LOCK = path.join(ROOT, 'skills-lock.json');
-const INSTALL = path.join(ROOT, 'install.sh');
-
-// Skills written by this kit and reviewed through its own PRs. Everything else is
-// third-party and MUST be locked. Listing is deliberate: a new skill that is neither
-// locked nor named here fails CI, so imported code cannot land unpinned by omission
-// (which is exactly how ui-ux-pro-max shipped executable Python with no provenance).
-// The caveman* / cavecrew family is NOT here — those are vendored from
-// JuliusBrussee/caveman and carry a FROZEN SOURCE header, so they belong in the lock.
+const ROOT = fs.realpathSync(path.join(__dirname, '..', '..'));
+const CANONICAL = '.agents/skills';
+const HARNESSES = ['.claude/skills', '.cursor/skills'];
+const ARCHIVES = ['.agents/variants/claude', '.agents/variants/cursor'];
 const KIT_AUTHORED = new Set([
   'debug', 'deploy', 'gstack', 'headroom', 'migrate', 'rtk', 'session-teacher',
 ]);
-
+const IGNORED_DIRS = new Set(['__pycache__', 'node_modules', '.pytest_cache']);
+const IGNORED_FILES = /\.(pyc|pyo)$|^\.DS_Store$/;
+const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const errors = [];
 
-function skillDirs(base) {
-  if (!fs.existsSync(base)) return [];
-  return fs.readdirSync(base).filter(d => fs.existsSync(path.join(base, d, 'SKILL.md')));
+function inside(base, file) {
+  const rel = path.relative(base, file);
+  return rel === '' || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${path.sep}`));
+}
+
+function relativePath(rel, label) {
+  if (typeof rel !== 'string' || !rel || rel.includes('\\') || path.win32.isAbsolute(rel) ||
+      rel.split('/').some(part => !part || part === '.' || part === '..')) {
+    errors.push(`${label}: unsafe relative path \`${rel}\``);
+    return false;
+  }
+  return true;
+}
+
+// Resolve each component without following symlinks. Canonical bodies and pinned
+// variants contain regular files; only harness adapters may be directory links.
+function regularPath(rel, kind, optional = false) {
+  if (!relativePath(rel, rel)) return null;
+  let file = ROOT;
+  const parts = rel.split('/');
+  for (const [index, part] of parts.entries()) {
+    file = path.join(file, part);
+    let stat;
+    try { stat = fs.lstatSync(file); }
+    catch (error) {
+      if (optional && error.code === 'ENOENT') return null;
+      errors.push(`${rel}: ${error.code === 'ENOENT' ? 'missing on disk' : error.message}`);
+      return null;
+    }
+    if (stat.isSymbolicLink()) {
+      errors.push(`${rel}: symlink in canonical or pinned payload at ${path.relative(ROOT, file)} — use a regular file/directory`);
+      return null;
+    }
+    const expectedDirectory = index < parts.length - 1 || kind === 'directory';
+    if (expectedDirectory ? !stat.isDirectory() : !stat.isFile()) {
+      errors.push(`${rel}: expected a regular ${expectedDirectory ? 'directory' : 'file'}`);
+      return null;
+    }
+  }
+  return file;
+}
+
+function skillEntries(base) {
+  const dir = regularPath(base, 'directory', true);
+  if (!dir) return [];
+  return fs.readdirSync(dir, { withFileTypes: true })
+    .filter(entry => !IGNORED_DIRS.has(entry.name) && (entry.isDirectory() || entry.isSymbolicLink()))
+    .map(entry => entry.name);
+}
+
+function frontmatter(file, expectedName) {
+  const rel = path.relative(ROOT, file);
+  const text = fs.readFileSync(file, 'utf8');
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) {
+    errors.push(`${rel}: valid frontmatter must start on the first line — move any comment below the block`);
+    return null;
+  }
+  const head = match[1].replace(/\r\n/g, '\n');
+  const name = (head.match(/^name:[ \t]*([^\r\n#]+)/m) || [])[1]?.trim().replace(/^(['"])(.*)\1$/, '$2');
+  if (name !== expectedName) errors.push(`${rel}: name \`${name}\` != directory/filename \`${expectedName}\` (kit invariant)`);
+  if (!/^description:/m.test(head)) errors.push(`${rel}: no \`description:\``);
+  return head;
+}
+
+function checkCodexPolicy(dir, head) {
+  // user-invocable controls the slash menu in Claude Code; it does not disable
+  // model invocation. Only disable-model-invocation maps to Codex's policy.
+  if (!head || !/^disable-model-invocation:[ \t]*true[ \t]*(?:#.*)?$/m.test(head)) return;
+  const rel = `${dir}/agents/openai.yaml`;
+  const file = regularPath(rel, 'file');
+  if (!file) return;
+  const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+  const policy = text.match(/^policy:[ \t]*(?:#.*)?\r?\n((?:[ \t]+[^\r\n]*\r?\n?)+)/m)?.[1] || '';
+  const fields = policy.match(/^  allow_implicit_invocation:.*$/gm) || [];
+  if ((text.match(/^policy:/gm) || []).length !== 1 || fields.length !== 1 ||
+      !/^  allow_implicit_invocation:[ \t]*false[ \t]*(?:#.*)?$/.test(fields[0])) {
+    errors.push(`${rel}: disable-model-invocation: true requires policy.allow_implicit_invocation: false`);
+  }
 }
 
 function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
-// Build artifacts, not source. They are regenerated on every run (py_compile rewrites
-// .pyc), so pinning them would make the lock fail against itself.
-const IGNORED_DIRS = new Set(['__pycache__', 'node_modules', '.pytest_cache']);
-const IGNORED_FILES = /\.(pyc|pyo)$|^\.DS_Store$/;
-
-// EVERY file in the skill except SKILL.md (which is `computedHash`). Not just scripts/:
-// a skill's `references/*.md` are instructions the agent reads and obeys, so a tampered
-// reference file is an injection with the same reach as a tampered script. impeccable
-// ships 28 of them; pinning only executables would leave the whole instruction payload
-// of a third-party skill unverified.
-function skillFiles(skillDir) {
-  const out = [];
-  (function walk(dir) {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (e.isDirectory()) {
-        if (!IGNORED_DIRS.has(e.name)) walk(path.join(dir, e.name));
-      } else if (!IGNORED_FILES.test(e.name)) {
-        const rel = path.relative(skillDir, path.join(dir, e.name));
-        if (rel !== 'SKILL.md') out.push(rel);
-      }
-    }
-  })(skillDir);
-  return out.sort();
-}
-
-// --- 1. frontmatter: at line 1, name === dir, description present ---
-function checkFrontmatter(base, label) {
-  for (const dir of skillDirs(base)) {
-    const file = path.join(base, dir, 'SKILL.md');
-    const text = fs.readFileSync(file, 'utf8');
-
-    // YAML frontmatter is only frontmatter when it opens the file. All seven caveman
-    // skills carried a FROZEN SOURCE comment above it, so the loader never parsed the
-    // block: their descriptions showed up in context as the literal string "<!--" and
-    // `disable-model-invocation` was silently ignored. Nothing caught it for releases.
-    if (!text.startsWith('---\n')) {
-      errors.push(`${label}/${dir}: SKILL.md does not start with \`---\` — frontmatter must be the first line, or the loader ignores it entirely (name, description, disable-model-invocation all lost). Move any comment below the frontmatter block.`);
-      continue;
-    }
-
-    const head = text.split(/^---$/m)[1] || '';
-    const name = (head.match(/^name:\s*(\S+)/m) || [])[1];
-    if (!name) errors.push(`${label}/${dir}: SKILL.md has no \`name:\``);
-    else if (name !== dir) errors.push(`${label}/${dir}: name \`${name}\` != directory \`${dir}\` — skill won't load`);
-    if (!/^description:/m.test(head)) errors.push(`${label}/${dir}: SKILL.md has no \`description:\``);
+function checkHash(file, expected) {
+  const rel = path.relative(ROOT, file);
+  if (typeof expected !== 'string' || !/^[a-f0-9]{64}$/.test(expected)) {
+    errors.push(`${rel}: missing or invalid sha256 in skills-lock.json`);
+    return;
   }
-}
-checkFrontmatter(AGENTS_SKILLS, '.agents/skills');
-checkFrontmatter(CLAUDE_SKILLS, '.claude/skills');
-checkFrontmatter(CURSOR_SKILLS, '.cursor/skills');
-
-// --- 1b. agents: same rule, same failure ---
-// Agent definitions load the same way skills do. Three cavecrew agents carried the
-// FROZEN SOURCE comment above their frontmatter and therefore never loaded at all —
-// while dev-workflow.md and gstack-workflow.md instruct the model to spawn
-// `cavecrew-reviewer`. Anyone without the caveman plugin was told to call an agent
-// that did not exist. Same bug as the skills; it needed the same gate.
-const AGENTS = path.join(ROOT, '.claude', 'agents');
-if (fs.existsSync(AGENTS)) {
-  for (const f of fs.readdirSync(AGENTS).filter(f => f.endsWith('.md'))) {
-    const text = fs.readFileSync(path.join(AGENTS, f), 'utf8');
-    const expected = f.replace(/\.md$/, '');
-    if (!text.startsWith('---\n')) {
-      errors.push(`.claude/agents/${f}: does not start with \`---\` — the agent will not load. Move any comment below the frontmatter.`);
-      continue;
-    }
-    const head = text.split(/^---$/m)[1] || '';
-    const name = (head.match(/^name:\s*(\S+)/m) || [])[1];
-    if (name !== expected) errors.push(`.claude/agents/${f}: name \`${name}\` != filename \`${expected}\``);
-    if (!/^description:/m.test(head)) errors.push(`.claude/agents/${f}: no \`description:\``);
-  }
-}
-
-// --- 2. lock covers vendored skills, both directions ---
-const lock = JSON.parse(fs.readFileSync(LOCK, 'utf8'));
-const locked = Object.keys(lock.skills || {});
-const vendored = skillDirs(AGENTS_SKILLS);
-
-for (const skill of vendored) {
-  if (!locked.includes(skill)) errors.push(`skills-lock.json: no record for vendored skill \`${skill}\``);
-}
-
-// --- 3. locked skills still hash to their computedHash ---
-// computedHash is the sha256 of the vendored SKILL.md *in this repo* (kit modifications
-// included) — see `hashSemantics` in the lock. Mismatch means the file changed since it
-// was last reviewed; that is either an unreviewed upstream bump or a tampered skill, and
-// both must be looked at by a human rather than waved through.
-for (const skill of locked) {
-  const file = [
-    path.join(AGENTS_SKILLS, skill, 'SKILL.md'),
-    path.join(CLAUDE_SKILLS, skill, 'SKILL.md'),
-  ].find(fs.existsSync);
-
-  if (!file) {
-    errors.push(`skills-lock.json: record \`${skill}\` points at a skill that no longer exists`);
-    continue;
-  }
-
-  const expected = lock.skills[skill].computedHash;
-  if (!expected) {
-    errors.push(`skills-lock.json: record \`${skill}\` has no \`computedHash\``);
-    continue;
-  }
-
   const actual = sha256(file);
   if (actual !== expected) {
-    errors.push(
-      `${path.relative(ROOT, file)}: sha256 does not match skills-lock.json\n` +
-      `      expected ${expected}\n` +
-      `      actual   ${actual}\n` +
-      `      If you changed this skill on purpose, review the diff, then set computedHash to the actual value.`
-    );
+    errors.push(`${rel}: sha256 does not match skills-lock.json\n` +
+      `      expected ${expected}\n      actual   ${actual}\n` +
+      '      Review the intended diff before updating the lock.');
   }
+}
 
-  checkSkillFiles(path.dirname(file), lock.skills[skill].fileHashes || {});
+// Instructions, references, metadata and scripts are all part of the pinned payload.
+function skillFiles(dir) {
+  const files = [];
+  function walk(rel) {
+    const current = regularPath(rel, 'directory');
+    if (!current) return;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if ((entry.isDirectory() && IGNORED_DIRS.has(entry.name)) || IGNORED_FILES.test(entry.name)) continue;
+      const child = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walk(child);
+      else if (regularPath(child, 'file')) {
+        const payload = path.posix.relative(dir, child);
+        if (payload !== 'SKILL.md') files.push(payload);
+      }
+    }
+  }
+  walk(dir);
+  return files.sort();
+}
 
-  // Some skills are vendored once per harness: `npx impeccable` emits a Cursor build
-  // that differs from the Claude Code one (different paths, invocation, allowed-tools).
-  // Both ship to users and both carry executable code, so both get pinned — verifying
-  // only the Claude copy would leave 66 unpinned executables in every Cursor install.
-  for (const [dir, v] of Object.entries(lock.skills[skill].variants || {})) {
-    const vf = path.join(ROOT, dir, 'SKILL.md');
-    if (!fs.existsSync(vf)) {
-      errors.push(`skills-lock.json: variant \`${dir}\` of \`${skill}\` no longer exists`);
+function checkArtifact(dir, record) {
+  if (!regularPath(dir, 'directory')) return;
+  const file = regularPath(`${dir}/SKILL.md`, 'file');
+  if (!file) return;
+  checkHash(file, record.computedHash);
+  const pinned = record.fileHashes || {};
+  if (typeof pinned !== 'object' || Array.isArray(pinned)) {
+    errors.push(`${dir}: fileHashes must be an object`);
+    return;
+  }
+  for (const [rel, expected] of Object.entries(pinned)) {
+    if (!relativePath(rel, `${dir} fileHashes`) || rel === 'SKILL.md') {
+      if (rel === 'SKILL.md') errors.push(`${dir}: pin SKILL.md with computedHash, not fileHashes`);
       continue;
     }
-    const got = sha256(vf);
-    if (got !== v.computedHash) {
-      errors.push(
-        `${dir}/SKILL.md: sha256 does not match skills-lock.json (variant of \`${skill}\`)\n` +
-        `      expected ${v.computedHash}\n` +
-        `      actual   ${got}`
-      );
-    }
-    checkSkillFiles(path.join(ROOT, dir), v.fileHashes || {});
+    const payload = regularPath(`${dir}/${rel}`, 'file');
+    if (payload) checkHash(payload, expected);
+  }
+  for (const rel of skillFiles(dir)) {
+    if (!Object.hasOwn(pinned, rel)) errors.push(`${dir}/${rel}: skill file not pinned in skills-lock.json`);
   }
 }
 
-// The rest of the skill: scripts AND references. A pinned SKILL.md with an unpinned
-// payload is theatre — the description stays innocent while the code that runs, or the
-// instructions the agent obeys, get swapped underneath it.
-function checkSkillFiles(skillDir, pinned) {
-  for (const [rel, want] of Object.entries(pinned)) {
-    const sp = path.join(skillDir, rel);
-    if (!fs.existsSync(sp)) {
-      errors.push(`${path.relative(ROOT, sp)}: pinned in skills-lock.json but missing on disk`);
+let records = {};
+const lockFile = regularPath('skills-lock.json', 'file');
+if (lockFile) {
+  try {
+    const lock = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    if (!lock.skills || typeof lock.skills !== 'object' || Array.isArray(lock.skills)) {
+      errors.push('skills-lock.json: skills must be an object');
+    } else records = lock.skills;
+  } catch (error) { errors.push(`skills-lock.json: invalid JSON — ${error.message}`); }
+}
+
+const canonicalNames = skillEntries(CANONICAL);
+const canonicalDirs = new Map();
+for (const skill of canonicalNames) {
+  const dir = `${CANONICAL}/${skill}`;
+  if (!SKILL_NAME.test(skill)) {
+    errors.push(`${dir}: invalid skill directory name`);
+    continue;
+  }
+  const source = regularPath(dir, 'directory');
+  if (!source) continue;
+  canonicalDirs.set(skill, source);
+  const file = regularPath(`${dir}/SKILL.md`, 'file');
+  if (file) checkCodexPolicy(dir, frontmatter(file, skill));
+  if (KIT_AUTHORED.has(skill)) skillFiles(dir); // Check payload paths; kit code is reviewed in its own PRs.
+  if (!KIT_AUTHORED.has(skill) && !Object.hasOwn(records, skill)) {
+    errors.push(`skills-lock.json: no record for vendored skill \`${skill}\``);
+  }
+}
+
+const lockedVariants = new Set();
+for (const [skill, record] of Object.entries(records)) {
+  if (!SKILL_NAME.test(skill) || !record || typeof record !== 'object' || Array.isArray(record)) {
+    errors.push(`skills-lock.json: invalid record \`${skill}\``);
+    continue;
+  }
+  const expectedPath = `${CANONICAL}/${skill}/SKILL.md`;
+  if (record.localPath !== expectedPath) {
+    errors.push(`skills-lock.json: record \`${skill}\` localPath must be exactly \`${expectedPath}\`, got \`${record.localPath}\``);
+  } else checkArtifact(`${CANONICAL}/${skill}`, record);
+
+  const variants = record.variants || {};
+  if (typeof variants !== 'object' || Array.isArray(variants)) {
+    errors.push(`skills-lock.json: record \`${skill}\` variants must be an object`);
+    continue;
+  }
+  for (const [dir, variant] of Object.entries(variants)) {
+    if (![...HARNESSES, ...ARCHIVES].some(base => dir === `${base}/${skill}`)) {
+      errors.push(`skills-lock.json: unsafe or unexpected variant path \`${dir}\` for \`${skill}\``);
       continue;
     }
-    const got = sha256(sp);
-    if (got !== want) {
-      errors.push(
-        `${path.relative(ROOT, sp)}: sha256 does not match skills-lock.json\n` +
-        `      expected ${want}\n` +
-        `      actual   ${got}`
-      );
+    if (!variant || typeof variant !== 'object' || Array.isArray(variant)) {
+      errors.push(`skills-lock.json: invalid variant record \`${dir}\``);
+      continue;
     }
-  }
-  // An attacker does not have to edit a pinned file — adding a new one is enough.
-  for (const rel of skillFiles(skillDir)) {
-    if (!(rel in pinned)) {
-      errors.push(`${path.relative(ROOT, path.join(skillDir, rel))}: skill file not pinned in skills-lock.json`);
-    }
+    lockedVariants.add(dir);
+    const file = regularPath(`${dir}/SKILL.md`, 'file');
+    if (file) frontmatter(file, skill);
+    checkArtifact(dir, variant);
   }
 }
 
-// --- 3b. third-party skills must be locked (fail closed) ---
-// CURSOR_SKILLS is scanned too: a skill dropped there ships to Cursor users just like
-// one in .claude/skills, and leaving that tree unscanned is how the Cursor build of
-// impeccable stayed unpinned while the Claude one was locked.
-const lockedVariantDirs = new Set(
-  Object.values(lock.skills).flatMap(r => Object.keys(r.variants || {}))
-);
-for (const skill of [...skillDirs(AGENTS_SKILLS), ...skillDirs(CLAUDE_SKILLS)]) {
-  if (locked.includes(skill) || KIT_AUTHORED.has(skill)) continue;
-  errors.push(
-    `skills/${skill}: not in skills-lock.json and not listed as kit-authored.\n` +
-    `      Third-party skills must be pinned. If this one is ours, add it to KIT_AUTHORED in this script.`
-  );
+const archivesDir = regularPath('.agents/variants', 'directory', true);
+if (archivesDir) {
+  for (const entry of fs.readdirSync(archivesDir, { withFileTypes: true })) {
+    if ((entry.isDirectory() || entry.isSymbolicLink()) && !ARCHIVES.includes(`.agents/variants/${entry.name}`)) {
+      errors.push(`.agents/variants/${entry.name}: unexpected harness archive directory`);
+    }
+  }
 }
-// A Cursor copy is a distinct artifact with its own bytes, so a lock record for the same
-// *name* proves nothing about it — it must be covered by an explicit `variants` entry.
-for (const skill of skillDirs(CURSOR_SKILLS)) {
-  const rel = path.relative(ROOT, path.join(CURSOR_SKILLS, skill));
-  if (KIT_AUTHORED.has(skill) || lockedVariantDirs.has(rel)) continue;
-  errors.push(
-    `${rel}: ships to Cursor users but is not pinned.\n` +
-    `      A lock record for the name \`${skill}\` does not cover this copy — its bytes differ.\n` +
-    `      Add it under \`variants\` on the \`${skill}\` record in skills-lock.json.`
-  );
+for (const base of ARCHIVES) {
+  for (const skill of skillEntries(base)) {
+    const rel = `${base}/${skill}`;
+    if (!lockedVariants.has(rel)) errors.push(`${rel}: archived harness variant is not pinned in skills-lock.json`);
+  }
 }
 
-// --- 4. install.sh copies only skills that exist ---
-const install = fs.readFileSync(INSTALL, 'utf8');
-for (const m of install.matchAll(/for skill in ([^;]+); do\s*\n\s*copy_dir "\$SCRIPT_DIR\/(\.[\w/.]+)\/\$skill"/g)) {
-  const [, list, base] = m;
-  for (const skill of list.replace(/\\\s*\n\s*/g, ' ').trim().split(/\s+/)) {
-    if (!fs.existsSync(path.join(ROOT, base, skill, 'SKILL.md'))) {
-      errors.push(`install.sh: copies \`${base}/${skill}\` — no SKILL.md there`);
+for (const base of HARNESSES) {
+  for (const skill of skillEntries(base)) {
+    const rel = `${base}/${skill}`;
+    const adapter = path.join(ROOT, rel);
+    if (!fs.lstatSync(adapter).isSymbolicLink()) {
+      if (!lockedVariants.has(rel)) errors.push(`${rel}: separate harness copy is not pinned under variants in skills-lock.json — use a canonical adapter or pin this artifact`);
+      continue;
+    }
+    const target = fs.readlinkSync(adapter);
+    if (path.isAbsolute(target) || path.win32.isAbsolute(target)) {
+      errors.push(`${rel}: adapter must use a relative symlink`);
+      continue;
+    }
+    let resolved;
+    try { resolved = fs.realpathSync(adapter); }
+    catch (error) {
+      errors.push(`${rel}: broken symlink → ${target} (${error.code})`);
+      continue;
+    }
+    if (!inside(ROOT, resolved) || resolved !== canonicalDirs.get(skill)) {
+      errors.push(`${rel}: unsafe adapter → ${target}; it must resolve to ${CANONICAL}/${skill} inside this repository`);
     }
   }
 }
 
-// --- 5. symlinks in .claude/skills resolve ---
-if (fs.existsSync(CLAUDE_SKILLS)) {
-  for (const entry of fs.readdirSync(CLAUDE_SKILLS)) {
-    const p = path.join(CLAUDE_SKILLS, entry);
-    if (fs.lstatSync(p).isSymbolicLink() && !fs.existsSync(p)) {
-      errors.push(`.claude/skills/${entry}: broken symlink → ${fs.readlinkSync(p)}`);
+// Agent definitions retain their own Claude Code frontmatter contract.
+const agentsDir = regularPath('.claude/agents', 'directory', true);
+if (agentsDir) {
+  for (const name of fs.readdirSync(agentsDir).filter(name => name.endsWith('.md'))) {
+    const file = regularPath(`.claude/agents/${name}`, 'file');
+    if (file) frontmatter(file, name.replace(/\.md$/, ''));
+  }
+}
+
+// Preserve validation of any explicit skill-copy lists in the installer. Dynamic
+// canonical discovery and target adapter layout are verified by install tests/CI.
+const installFile = regularPath('install.sh', 'file');
+if (installFile) {
+  const install = fs.readFileSync(installFile, 'utf8');
+  for (const match of install.matchAll(/for skill in ([^;]+); do\s*\n\s*copy_dir "\$SCRIPT_DIR\/(\.[\w/.]+)\/\$skill"/g)) {
+    const [, list, base] = match;
+    for (const skill of list.replace(/\\\s*\n\s*/g, ' ').trim().split(/\s+/)) {
+      if (!fs.existsSync(path.join(ROOT, base, skill, 'SKILL.md'))) errors.push(`install.sh: copies \`${base}/${skill}\` — no SKILL.md there`);
     }
   }
 }
 
 if (errors.length) {
   console.error('skills: validation failed\n');
-  for (const e of errors) console.error(`  ${e}`);
+  for (const error of errors) console.error(`  ${error}`);
   console.error(`\n${errors.length} problem(s).`);
   process.exit(1);
 }
-console.log(`skills: ${vendored.length} vendored + ${skillDirs(CLAUDE_SKILLS).length} in .claude — frontmatter, lock (${locked.length} sha256 verified), install.sh and symlinks all valid`);
+const authored = canonicalNames.filter(skill => KIT_AUTHORED.has(skill)).length;
+console.log(`skills: ${canonicalNames.length - authored} vendored + ${authored} kit-authored canonical skills; ${lockedVariants.size} pinned variants — frontmatter, Codex policy, payload hashes and adapters valid`);

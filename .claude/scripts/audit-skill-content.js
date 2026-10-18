@@ -15,13 +15,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const ROOT = path.join(__dirname, '..', '..');
+const ROOT = fs.realpathSync(path.join(__dirname, '..', '..'));
 const TARGETS = [
-  '.agents/skills', '.claude/skills', '.cursor/skills',
+  'AGENTS.md', 'MODELS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.cursor/AGENTS.md',
+  '.agents/skills', '.agents/variants', '.claude/skills', '.cursor/skills',
   '.claude/rules', '.cursor/rules', '.claude/agents',
 ];
 const SKIP_DIRS = new Set(['__pycache__', 'node_modules', '.pytest_cache']);
-const SCAN_EXT = /\.(md|mdc|js|mjs|py|sh|json|txt)$/;
+const SCAN_EXT = /\.(md|mdc|js|mjs|py|sh|json|ya?ml|txt)$/;
 
 // garak taxonomy → static signatures.
 const SIGNATURES = [
@@ -89,6 +90,8 @@ const allowed = new Map(ALLOWLIST.reviewed.map(e => [`${e.id}:${e.lineSha256}`, 
 
 const findings = [];
 const reviewed = [];
+const errors = [];
+const visited = new Set();
 let scanned = 0;
 
 function scan(file) {
@@ -116,13 +119,46 @@ function scan(file) {
   }
 }
 
-function walk(dir) {
-  if (!fs.existsSync(dir)) return;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(p); }
-    else if (SCAN_EXT.test(e.name)) scan(p);
+function walk(file) {
+  let stat;
+  try { stat = fs.lstatSync(file); }
+  catch (error) {
+    if (error.code === 'ENOENT') return;
+    errors.push(`${path.relative(ROOT, file)}: ${error.message}`);
+    return;
   }
+  const rel = path.relative(ROOT, file);
+  let resolved;
+  try { resolved = fs.realpathSync(file); }
+  catch (error) {
+    errors.push(`${rel}: broken symlink or unreadable path (${error.code})`);
+    return;
+  }
+  const relativeTarget = path.relative(ROOT, resolved);
+  if (path.isAbsolute(relativeTarget) || relativeTarget === '..' || relativeTarget.startsWith(`..${path.sep}`)) {
+    errors.push(`${rel}: path escapes this repository`);
+    return;
+  }
+  if (stat.isSymbolicLink()) {
+    const adapter = rel.match(/^\.(claude|cursor)\/skills\/([^/]+)$/);
+    if (adapter) {
+      const target = fs.readlinkSync(file);
+      const canonical = path.join(ROOT, '.agents', 'skills', adapter[2]);
+      if (path.isAbsolute(target) || path.win32.isAbsolute(target) || resolved !== canonical) {
+        errors.push(`${rel}: adapter must be a relative link to .agents/skills/${adapter[2]}`);
+        return;
+      }
+    }
+    stat = fs.statSync(file);
+  }
+  // Canonical bodies are scanned first. Adapters and repeated imports resolve to
+  // the same real path, so their content is scanned once without following loops.
+  if (visited.has(resolved)) return;
+  visited.add(resolved);
+  if (stat.isDirectory()) {
+    if (SKIP_DIRS.has(path.basename(file))) return;
+    for (const entry of fs.readdirSync(file)) walk(path.join(file, entry));
+  } else if (stat.isFile() && SCAN_EXT.test(file)) scan(file);
 }
 
 for (const t of TARGETS) walk(path.join(ROOT, t));
@@ -132,11 +168,13 @@ findings.sort((a, b) => order[a.sev] - order[b.sev] || a.file.localeCompare(b.fi
 
 const high = findings.filter(f => f.sev === 'HIGH');
 
-console.log(`skill-content audit: ${scanned} file(s) scanned across ${TARGETS.length} trees`);
+console.log(`skill-content audit: ${scanned} file(s) scanned across ${TARGETS.length} instruction paths`);
 console.log(`  signatures: garak taxonomy (latentinjection, xss/exfiltration, promptinject, encoding)`);
 console.log(`  ${reviewed.length} match(es) previously reviewed and allowlisted\n`);
 
-if (!findings.length) {
+for (const error of errors) console.error(`  [PATH] ${error}`);
+
+if (!findings.length && !errors.length) {
   console.log('  no unreviewed prompt-injection signatures found');
   process.exit(0);
 }
@@ -150,7 +188,7 @@ for (const f of findings) {
 }
 
 console.log(`  ${high.length} HIGH, ${findings.length - high.length} MEDIUM/LOW`);
-if (high.length) {
-  console.error('\nHIGH findings must be reviewed by a human before this content ships.');
+if (high.length || errors.length) {
+  console.error('\nHIGH findings or unsafe instruction paths must be resolved before this content ships.');
   process.exit(1);
 }

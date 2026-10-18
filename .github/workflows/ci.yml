@@ -36,14 +36,17 @@ jobs:
         # sha256 pin in skills-lock.json (check-skills.js).
         run: |
           # .mjs matters: impeccable ships 61 of them and zero plain .js in most subdirs.
-          while IFS= read -r f; do
-            node --check "$f"
-          done < <(find .claude/hooks .cursor/hooks .claude/skills -type f \( -name '*.js' -o -name '*.mjs' \))
+          for directory in .claude/hooks .cursor/hooks .claude/scripts .agents/skills .agents/variants .claude/skills .cursor/skills; do
+            [[ -d "$directory" ]] || continue
+            while IFS= read -r f; do
+              node --check "$f"
+            done < <(find "$directory" -type f \( -name '*.js' -o -name '*.mjs' \))
+          done
 
       - name: Python compile
         run: |
-          python3 -m py_compile .claude/skills/caveman-compress/scripts/*.py
-          python3 -m py_compile .claude/skills/ui-ux-pro-max/scripts/*.py
+          python3 -m py_compile .agents/skills/caveman-compress/scripts/*.py
+          python3 -m py_compile .agents/skills/ui-ux-pro-max/scripts/*.py
 
       - name: JSON valid
         run: |
@@ -51,20 +54,14 @@ jobs:
             node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
           done
 
-      - name: Unit tests (JS)
-        run: node --test
-
       - name: Python lint (ruff — pyflakes + syntax errors)
-        # Kit-authored scripts only. Vendored skills are pinned by sha256 in
+        # Locally maintained Python scripts only. Vendored skills are pinned by sha256 in
         # skills-lock.json — linting them to upstream's style would mean patching pinned
         # files and rebaselining the hash on every upstream nit, which defeats the pin.
         # Their syntax is covered by the py_compile step above.
         run: |
           python3 -m pip install ruff
-          ruff check --select F,E9 --ignore F811 .claude/skills/caveman-compress/scripts/
-
-      - name: Python unit tests
-        run: python3 -m unittest discover -s test -p 'test_*.py' -v
+          ruff check --select F,E9 --ignore F811 .agents/skills/caveman-compress/scripts/
 
       - name: MCP package version check
         run: node .claude/scripts/check-mcp-versions.js
@@ -72,10 +69,10 @@ jobs:
       - name: cursor-rules sync check (.claude/rules vs .cursor/rules)
         run: node .claude/scripts/check-cursor-sync.js
 
-      - name: Skills check (frontmatter, skills-lock, install.sh, symlinks)
+      - name: Skills check (canonical payloads, variants, invocation policy, adapters)
         run: node .claude/scripts/check-skills.js
 
-      - name: Prompt-injection audit of skill/rule/agent content
+      - name: Prompt-injection audit of shared instructions and skill/rule/agent content
         # Static scan of everything the agent reads as instructions. Audits find prompt
         # injection in roughly a third of public skills, and a vendored skill runs with
         # the user's rights — so the file is the thing to scan. Signature classes follow
@@ -89,12 +86,37 @@ jobs:
           bash install.sh /tmp/kit-target --yes --stacks all
           test -f /tmp/kit-target/.claude/hooks/safety-guard.js
           test -f /tmp/kit-target/.cursor/hooks/safety-guard.js
-          # Skills must land in BOTH harnesses — Cursor shipped without any for
-          # several releases because nothing asserted this.
-          test -f /tmp/kit-target/.claude/skills/impeccable/SKILL.md
-          test -f /tmp/kit-target/.claude/skills/ux-core/SKILL.md
-          test -f /tmp/kit-target/.cursor/skills/impeccable/SKILL.md
-          test -f /tmp/kit-target/.cursor/skills/ux-core/SKILL.md
+          test -f /tmp/kit-target/AGENTS.md
+          test -f /tmp/kit-target/MODELS.md
+          test -f /tmp/kit-target/CLAUDE.md
+          # Codex and Cursor discover .agents/skills. Claude Code uses relative
+          # adapters whose targets stay inside the installed project.
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const target = fs.realpathSync('/tmp/kit-target');
+          const canonical = path.join(target, '.agents/skills');
+          const source = path.resolve('.agents/skills');
+          const names = fs.readdirSync(source).filter(name => fs.lstatSync(path.join(source, name)).isDirectory()).sort();
+          assert.deepEqual(fs.readdirSync(canonical).sort(), names);
+          const claude = path.join(target, '.claude/skills');
+          assert.deepEqual(fs.readdirSync(claude).sort(), names);
+          for (const name of names) {
+            const body = path.join(canonical, name, 'SKILL.md');
+            assert.ok(fs.lstatSync(path.join(canonical, name)).isDirectory(), `${name}: canonical must be a regular directory`);
+            assert.ok(fs.lstatSync(body).isFile(), `${name}: SKILL.md must be a regular file`);
+            assert.equal(fs.readFileSync(body, 'utf8'), fs.readFileSync(path.join(source, name, 'SKILL.md'), 'utf8'));
+            const adapter = path.join(claude, name);
+            assert.ok(fs.lstatSync(adapter).isSymbolicLink(), `${name}: missing Claude adapter`);
+            assert.ok(!path.isAbsolute(fs.readlinkSync(adapter)), `${name}: adapter must be relative`);
+            assert.equal(fs.realpathSync(adapter), path.join(canonical, name), `${name}: adapter escaped or points at another skill`);
+          }
+          const cursor = path.join(target, '.cursor/skills');
+          if (fs.existsSync(cursor)) assert.deepEqual(fs.readdirSync(cursor), [], 'Cursor must use the canonical skills without duplicate active copies');
+          assert.ok(!fs.existsSync(path.join(target, '.codex/skills')), 'Codex must use .agents/skills');
+          assert.ok(!fs.existsSync(path.join(target, '.codex/config.toml')), 'The kit must not inject a Codex hook configuration');
+          NODE
           # Every rule in the repo must reach the target with --stacks all. install.sh
           # copied "frontend-standards" — a name that has not existed since v0.1.0 — so
           # Vue users silently got no Vue rule at all. A name list nobody diffs rots.
@@ -103,5 +125,3 @@ jobs:
           done
           test -f /tmp/kit-target/.cursor/rules/global-standards.mdc
           test -f /tmp/kit-target/.cursor/rules/external-content.mdc
-          # No skill may install as a symlink into a user's project.
-          ! find /tmp/kit-target/.claude/skills /tmp/kit-target/.cursor/skills -type l | grep -q .

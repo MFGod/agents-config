@@ -27,6 +27,10 @@
         "command": "bash \".cursor/hooks/rtk-rewrite.sh\"",
         "timeout": 5,
         "failClosed": false
+      },
+      {
+        "command": "[ ! -f \".agents/skills/impeccable/scripts/impeccable\" ] || \".agents/skills/impeccable/scripts/impeccable\" hook-before-edit",
+        "timeout": 5
       }
     ],
     "beforeShellExecution": [

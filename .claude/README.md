@@ -28,9 +28,11 @@
 ├── scripts/               # Install-time утилиты (не runtime-хуки)
 │   └── merge-settings.js        # Idempotent merge хуков при обновлении кита
 ├── rules/                 # Правила для модели (auto-attach по путям)
-├── skills/                # Slash-команды (/caveman, /gstack и др.)
+├── skills/                # Адаптеры <name> → ../../.agents/skills/<name>
 └── agents/                # Субагенты (cavecrew-*)
 ```
+
+Общие инструкции — корневой `AGENTS.md`; `CLAUDE.md` импортирует его строкой `@AGENTS.md`. Все skills живут в `.agents/skills/`; `.claude/skills/<name>` — ссылки на общий источник. Исходные клиентские варианты impeccable сохранены в `.agents/variants/` с отдельными хешами и не участвуют в discovery. [Claude memory](https://code.claude.com/docs/en/memory#agentsmd), [Claude skills](https://code.claude.com/docs/en/skills).
 
 ---
 
@@ -38,7 +40,7 @@
 
 | Параметр | Значение | Описание |
 |----------|----------|----------|
-| `effortLevel` | `high` | Модель думает глубже (больше вычислений на ответ) |
+| `effortLevel` | `medium` | Стартовый уровень для Opus 5.5 / Sonnet 5.5; повышать по сложности задачи |
 | `theme` | `dark-ansi` | Тёмная тема с ANSI-цветами в терминале |
 | `enableAllProjectMcpServers` | `true` | Все MCP-серверы из `.mcp.json` включаются автоматически |
 | `hooks.SessionStart` | `session-activate.js` | Активирует caveman + headroom + RTK при старте сессии |
@@ -48,6 +50,8 @@
 | `statusLine` | `caveman-statusline.sh` | Показывает `[CAVEMAN]` badge в строке состояния терминала |
 
 SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToolUse (rtk-rewrite.sh) — **10 секунд**.
+
+`medium` задаётся только при новой установке. Обновление сохраняет выбранные пользователем модель и effort. Выбор моделей, различия Claude Code/API и миграция: [`MODELS.md`](MODELS.md) (в исходном репозитории — [`../MODELS.md`](../MODELS.md)).
 
 ---
 

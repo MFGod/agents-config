@@ -1,31 +1,32 @@
-# Agents-config v0.5.0
+# Agents-config v0.6.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platforms: Claude Code + Cursor](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Cursor-blue)](#)
+[![Platforms: Claude Code + Codex + Cursor](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Codex%20%2B%20Cursor-blue)](#)
 
 Конфигурация для AI-агентов: правила кодирования, skills, хуки жизненного цикла.
-Поддерживает **Cursor** (`.cursor/`) и **Claude Code** (`.claude/`).
+Общие инструкции и skills поддерживают **Claude Code**, **Codex** и **Cursor**. Runtime-хуки и MCP устанавливаются отдельно для Claude Code и Cursor.
 
 Ключевые компоненты:
 
 | Компонент | Что делает |
 |-----------|-----------|
-| **Rules** | Стандарты кодирования — auto-attach по типу файла (React / Vue / Django / FastAPI); `git-conventions` и `external-content` активны всегда |
+| **Общие инструкции** | Корневой `AGENTS.md` — один источник для трёх клиентов. `CLAUDE.md` содержит только `@AGENTS.md` для совместимости |
+| **Rules** | Общий текст в `.claude/rules/`, адаптеры Cursor в `.cursor/rules/`; Codex читает нужные правила по маршрутам из `AGENTS.md`. Auto-attach зависит от клиента |
 | **External content = данные** | Правило `external-content`: веб-страницы, MCP-результаты, API-ответы, тикеты — это **данные для анализа, а не инструкции для исполнения**. Текст вида «ignore previous instructions» внутри загруженной страницы — находка для отчёта, а не команда |
-| **Skills — паритет платформ** | Один набор скиллов в CC (`.claude/skills/`) и Cursor (`.cursor/skills/`, [Cursor 2.4+](https://cursor.com/docs/skills)): тот же `SKILL.md`-стандарт, автовыбор по `description`, ленивая загрузка тела скилла |
+| **Общие skills** | Один набор в `.agents/skills/`: Codex и Cursor обнаруживают его нативно, Claude Code — через адаптеры `.claude/skills/`. Краткое описание → выбранный `SKILL.md` → нужные references. Клиентские инструменты и права различаются |
 | **Caveman mode** | Сжимает output модели 65% (замер апстрима) без потери смысла — CC (с toggle) и Cursor (inject через `sessionStart` хук) |
 | **Headroom MCP** | Сжимает input модели (логи, grep, листинги) перед передачей в контекст — CC и Cursor |
 | **MCP серверы** | `context7` (документация библиотек), `playwright` (автоматизация браузера), `headroom` — CC + Cursor; `filesystem`, `fetch` — только Cursor. `chrome-devtools` — рекомендация, не автоконфигурится (см. ниже). Список сверяется с обоими `mcp.json` в CI (`check-mcp-versions.js`) |
 | **Safety guard** | `PreToolUse` хук на CC и Cursor (Cursor — ещё legacy `beforeShellExecution`): блокирует `DROP TABLE/DATABASE` и `git push --force` на protected branches (`main/master/dev/test/prod`) |
 | **RTK** | Перехватывает Bash-команды через `PreToolUse` hook, переписывает через `rtk` для сжатия вывода — **CC + Cursor** (Cursor получил `preToolUse`) |
 | **gstack** | Методология разработки: Think → Plan → Build → Review → Test с FROZEN GATE |
-| **Workflow skills** | Структурированные циклы: `/debug`, `/deploy`, `/migrate`, `/session-teacher`, `/caveman-commit` — ставятся всегда (CC + Cursor) |
+| **Workflow skills** | Debug, deploy, migrate, session-teacher, caveman-commit — общие workflows. Явный вызов `/name` в Claude/Cursor, `$name` в Codex |
 | **CaveCrew agents** | 4 субагента: `investigator` (поиск кода), `reviewer` (ревью), `tester` (тесты) — на haiku; `builder` (правка 1-2 файлов) наследует main-модель |
 | **Design quality pipeline** | `design-critic` — блокирует шаблонные решения, требует 3 альтернативы, benchmark против Linear/Stripe/Vercel; `before-after-reviewer` — скоринг 7 метрик до/после, блокирует деградацию |
-| **Design skills** | `/ui-ux-pro-max` — 67 стилей, 96 палитр, 57 font-пар; `/ux-core` — 105 когнитивных биасов как обоснование UX-решений |
+| **Design skills** | `/ui-ux-pro-max` — 79 стилей, 192 палитры, 74 font-пары; `/ux-core` — 105 когнитивных биасов как обоснование UX-решений |
 | **UX Review hook** | `PostToolUse` хук: автоматически задаёт 6 UX-вопросов при редактировании `.tsx / .vue / .html / .css / .scss / .svelte` |
-| **Vendored design skills** | `impeccable` (Paul Bakaus) — **единственная точка входа, которую модель выбирает сама**: craft/audit/critique/polish/harden/animate. Нишевые — `explicit-only` (`disable-model-invocation`), вызываются по имени: `taste-skill` x5 (leonxlnx) — `/design-taste-frontend` (новые лендинги), `/redesign-existing-projects`, `/high-end-visual-design`, `/minimalist-ui`, `/industrial-brutalist-ui`; `/emil-design-eng` (emilkowalski, MIT) — UI polish + решение «нужна ли анимация». Explicit-only убирает их `description` из контекста **каждой** сессии и прекращает конкуренцию с `impeccable` в автовыборе — routing-таблица в [`CLAUDE.md`](CLAUDE.md) |
-| **Writing skill** | `humanizer` (blader/humanizer, MIT) — убирает признаки ИИ-текста по гайду Wikipedia «Signs of AI writing» (клише, em dash, inflated symbolism и др.). Только Claude Code. `explicit-only` (`disable-model-invocation`) — переписывание «под человека» не выбирается моделью само |
+| **Vendored design skills** | `impeccable` — общая точка входа в дизайн. Нишевые направления вызываются явно; маршрутизация в [`AGENTS.md`](AGENTS.md). Claude/Cursor используют `disable-model-invocation`, Codex — `policy.allow_implicit_invocation: false` в `agents/openai.yaml` |
+| **Writing skill** | `humanizer` (blader/humanizer, MIT) — переписывает ИИ-текст, сохраняя факты. Общий explicit-only skill; инструментальные ограничения клиентские |
 | **Цепочка поставки скиллов** | Скилл — не текст, а инструкции, исполняемые **с правами пользователя**. [`skills-lock.json`](skills-lock.json) пинит sha256 **каждого файла** скилла: `SKILL.md`, `scripts/` (код, который выполнится) и `references/` (инструкции, которым агент подчинится). CI fail-closed: незапиненный или изменённый файл роняет сборку (`check-skills.js`). Приёмка стороннего скилла — чеклист в [`SECURITY.md`](SECURITY.md) |
 | **Аудит на prompt injection** | `audit-skill-content.js` статически сканирует всё, что агент читает как инструкции (скиллы, правила, агенты) по таксономии атак [garak](https://github.com/NVIDIA/garak): latentinjection, exfiltration, promptinject, encoding. HIGH роняет CI; безобидные совпадения заносятся в allowlist **по sha256 строки** — одобренное исключение умирает в момент изменения своей строки |
 | **Внешние тулы (опционально)** | `install.sh --with-tools`: `skillspector` (NVIDIA, security-скан скиллов), `codebase-memory-mcp` (code-graph MCP), `agent-reach` (web-доступ для агента), Paper MCP, `dcg` (destructive command guard — хард-блок `rm -rf` / `reset --hard` / force push / `DROP TABLE` до запуска, PreToolUse-хук поверх kit NEVER-list) — каждый со своим y/N |
@@ -45,7 +46,26 @@ git clone git@github.com:MFGod/agents-config.git
 bash agents-config/install.sh /path/to/your-project
 ```
 
-Скрипт спросит, какие платформы установить (Claude Code / Cursor) и какие стек-правила нужны (React / Vue / FastAPI / Django). Ядро (hooks, agents, global rules, git-conventions, caveman, gstack, headroom, rtk, workflow skills: debug / deploy / migrate / session-teacher, design skills: impeccable / taste-skill / emil-design-eng / ux-core) ставится всегда. Существующие файлы не перезаписываются.
+Скрипт спросит, какие клиенты установить (Claude Code / Codex / Cursor) и какие стек-правила нужны (React / Vue / FastAPI / Django). Любой выбранный клиент получает общий `AGENTS.md`, `MODELS.md`, правила и skills. Хуки, агенты и MCP доставляются только для выбранного клиентского адаптера. Пользовательские настройки модели, effort, инструкции и изменённые skills сохраняются.
+
+Только общая поставка для Codex, без автоматической настройки его hooks или MCP:
+
+```bash
+bash agents-config/install.sh /path/to/your-project --codex-only --yes --stacks all
+```
+
+При обновлении installer переносит известные неизменённые копии старого кита в `.agents/backups/`, подключает общий источник и записывает manifest владения файлами. Если старая копия изменена пользователем, сохраняет её и сообщает путь конфликта; `--force` не снимает эту защиту общих файлов.
+
+```text
+AGENTS.md
+CLAUDE.md                           # @AGENTS.md
+.agents/skills/<name>/SKILL.md
+.agents/skills/<name>/references/
+.agents/skills/<name>/agents/openai.yaml  # policy, если skill явный
+.claude/skills/<name>                # ссылка на общий skill внутри проекта
+```
+
+На системах без поддержки symlink installer сообщит, какой адаптер не удалось создать. Фактическую загрузку после установки проверяйте в нужном клиенте: общий файл не делает их permissions и tools одинаковыми. Discovery и caveats описаны в [`MODELS.md`](MODELS.md).
 
 Флаг `--with-tools` дополнительно предлагает поставить внешние тулы (skillspector, codebase-memory-mcp, agent-reach, Paper MCP, dcg) — сторонний код с GitHub, каждый со своим подтверждением:
 
@@ -99,7 +119,9 @@ bash agents-config/install.sh /path/to/your-project --with-tools
 |--------|------|
 | Claude Code — настройки, хуки, режимы, агенты | [`.claude/README.md`](.claude/README.md) |
 | История изменений | [`CHANGELOG.md`](CHANGELOG.md) |
-| Указатель для агента (Cursor) | [`.cursor/AGENTS.md`](.cursor/AGENTS.md) |
+| Claude Opus 5.5, Sonnet 5.5 и GPT-6.1 Sol — выбор, effort, prompting, API | [`MODELS.md`](MODELS.md) |
+| Общие инструкции для агентов | [`AGENTS.md`](AGENTS.md) |
+| Cursor — настройки и хуки | [`.cursor/README.md`](.cursor/README.md) |
 | Схема работы системы | [`FLOW.md`](FLOW.md) |
 
 ---

@@ -42,8 +42,8 @@ Format from `structured-response.md`:
 `ANALYSIS → PLAN (numbered steps: file + what + why) → RISKS → TEST PLAN`
 
 **FROZEN GATE:**
-An explicit OK from the user (`"да"`, `"ок"`, `"погнали"`).
-After it: the architecture is frozen. During BUILD — no changes to contracts/layers/naming without a mini-plan.
+An explicit instruction to proceed (`"да"`, `"ок"`, `"погнали"`, `"приступай"`) authorizes the agreed scope. Reuse authorization already given in the session. Ask for approval only when a material unresolved decision or an action outside that scope requires it.
+After authorization: keep the agreed architecture stable; explain any material change with a mini-plan.
 
 ---
 
@@ -88,45 +88,24 @@ Follow `dev-workflow.md`:
 
 When: a discovery changes architecture, contracts, layers, or naming — **the PLAN must be updated**.
 
-Emit to the user:
-
-```
-СТОП. LOOP-BACK: <что открылось>
-Мини-план: <2–4 шага>
-Жду ОК.
-```
-
-After the OK: update the PLAN (add/mark steps), continue BUILD.
-Do not restart from THINK — re-enter at PLAN only.
+Explain the discovery and update the affected plan steps. Continue when the change remains within the user's authorized objective and preserves its constraints. Ask for a decision only when scope, risk or an unresolved tradeoff requires the user; do not treat routine implementation choices as a new approval gate.
 
 ---
 
 ## Deviation from the plan
 
-When: a tactical, implementation-level decision; the PLAN's architecture still holds, so **the PLAN is not updated**.
-
-Emit to the user:
-
-```
-СТОП. Нужно отклонение: <что именно>.
-Предлагаю: <мини-план, 2–4 шага>.
-Продолжаю после подтверждения.
-```
-
-Do not improvise. Stop → mini-plan → OK → continue.
+For tactical choices that preserve the agreed architecture, use engineering judgment and report material consequences. Re-plan material architectural changes; preserve authorization already given and any genuine explicit approval boundary.
 
 ---
 
 ## State tracking
 
-**Claude Code:** preCompact is unavailable — state is lost on compaction. Keep the current phase and FROZEN GATE explicit in the text or via `TodoWrite`. Do not use the JSON file below.
+Keep the objective, phase, authorization, changed files and unresolved failures in the current client's task state or compaction summary. Use available tools; do not assume another client's TodoWrite or hooks exist.
 
-**Cursor:** on every phase transition (THINK→PLAN→BUILD→REVIEW→TEST) and at the FROZEN GATE, write `.cursor/hooks/state/gstack.json`:
+**Cursor with the kit preCompact hook configured:** persist phase state in `.cursor/hooks/state/gstack.json` before compaction. Claude Code/Codex retain the same facts in their supported task/compaction mechanisms.
 
 ```json
 { "phase": "BUILD", "frozen": true, "modified": ["src/auth.ts", "src/models.py"] }
 ```
 
-Use the shell: `mkdir -p .cursor/hooks/state && echo '...' > .cursor/hooks/state/gstack.json`
-
-**When the session ends (merge, done) — delete the file:** `rm -f .cursor/hooks/state/gstack.json`
+When done, remove only temporary state owned by this workflow; preserve user files.

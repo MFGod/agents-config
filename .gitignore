@@ -21,6 +21,10 @@ secrets/
 # Локальное install-состояние (генерируется при установке, не для коммита)
 .claude/kit-meta.json
 .cursor/kit-meta.json
+.codex/kit-meta.json
+.agents/kit-meta.json
+.agents/install-manifest.json
+.agents/backups/
 
 # Личные настройки (не дистрибутив)
 .claude/settings.json
