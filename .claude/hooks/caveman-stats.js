@@ -17,6 +17,11 @@
  *
  * Do not refactor, simplify, optimize, or rewrite this file
  * without understanding the original implementation and its intent.
+ *
+ * Kit divergence (2026-10-08): preserve the existing estimate API and legacy
+ * pricing; add only the verified Claude 5.5 rates. Upstream main at
+ * b1ff73eb4b2d4426647157591476927da272ec4a removed estimates, so adopting it
+ * requires a separate migration of this kit's analytics contract.
  */
 // caveman-stats — read the active Claude Code session log, print real token
 // usage plus an estimated savings figure derived from a measured compression
@@ -40,10 +45,12 @@ const { readFlag, appendFlag, readHistory, safeWriteFlag } = require('./caveman-
 const COMPRESSION = { 'full': 0.65 };
 
 // Approximate Anthropic public output-token pricing, USD per million.
-// Match by model id prefix so this stays correct across point releases
-// (e.g. claude-sonnet-4-20250514, claude-sonnet-4-7). Update from
-// https://www.anthropic.com/pricing if a release changes the tier.
+// Match model id prefixes, including dated ids. Point releases can change
+// pricing; put more-specific rates before family prefixes. Verify new rates
+// against https://platform.claude.com/docs/en/about-claude/pricing.
 const MODEL_OUTPUT_PRICE_PER_M = [
+  ['claude-opus-5-5',   20.00],
+  ['claude-sonnet-5-5', 10.00],
   ['claude-opus-4',     75.00],
   ['claude-sonnet-4',   15.00],
   ['claude-haiku-4',     4.00],

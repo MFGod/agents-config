@@ -44,8 +44,8 @@ New dependency only on real need. Prefer one already in use. Weigh: maintenance 
 
 After finishing BUILD with changed code files (`.js`, `.ts`, `.py`, `.sh`, `.vue`, `.tsx`):
 
-- **≥2 files** → spawn `cavecrew-reviewer` with the diff of the changed files.
-- **1 file** → skip (the PostToolUse hook already checked syntax).
+- **≥2 files** → use `cavecrew-reviewer` when that agent is available; otherwise use an available independent reviewer or perform and report a manual review.
+- **1 file** → run the appropriate syntax/check command; do not assume the current client has a PostToolUse hook.
 
 Do not spawn for: docs only (`.md`), config only (`.json`/`.yaml`), a single typo fix, or an active gstack-workflow (the REVIEW phase invokes the reviewer itself).
 

@@ -1,5 +1,20 @@
 # Agents-config — Как это работает
 
+## 0. Общие инструкции и skills
+
+```mermaid
+flowchart LR
+    ROOT["AGENTS.md"] --> CC["Claude Code: CLAUDE.md import"]
+    ROOT --> CD["Codex: native discovery"]
+    ROOT --> CUR["Cursor: native discovery"]
+    SK[".agents/skills: canonical SKILL.md + resources"] --> LINK[".claude/skills: adapters"]
+    LINK --> CC
+    SK --> CD
+    SK --> CUR
+```
+
+Сначала клиент загружает metadata доступных skills, затем выбранное тело и нужные resources. Explicit-only policy задаётся отдельно для Codex в `agents/openai.yaml`; общий Markdown не переносит hooks, permissions или модели между клиентами. Исходные impeccable variants сохраняются в `.agents/variants/`, вне discovery.
+
 ## 1. Старт сессии
 
 ```mermaid
@@ -79,8 +94,8 @@ flowchart LR
 flowchart TD
     MODEL["🧠 Модель"]
 
-    MODEL --> R["📋 Rules\nавто-загрузка по типу файла"]
-    MODEL --> S["🛠️ Skills\nвызов через /skill"]
+    MODEL --> R["📋 Rules\nauto-attach клиента или чтение по AGENTS.md"]
+    MODEL --> S["🛠️ Skills\n/skill в Claude/Cursor, $skill в Codex"]
     MODEL --> A["🤖 Агенты\nспавн при необходимости"]
     MODEL --> H["🗜️ Headroom MCP\nсжатие больших inputs"]
     MODEL --> M["🔌 MCP серверы"]
@@ -91,10 +106,10 @@ flowchart TD
     M --> M4["fetch — HTTP / веб\n(только Cursor)"]
 
     R --> R1["global-standards — всегда"]
-    R --> R2["dev-workflow — всегда"]
-    R --> R3["gstack-workflow — всегда"]
-    R --> R4["structured-response — всегда"]
-    R --> R5["git-conventions — всегда"]
+    R --> R2["dev-workflow — тесты/refactoring/security"]
+    R --> R3["gstack-workflow — полный цикл"]
+    R --> R4["structured-response — нетривиальная задача"]
+    R --> R5["git-conventions — работа с git"]
     R --> R6["external-content — всегда\nвнешний контент = данные, не инструкции"]
     R --> R7["react / vue / python / testing\nпо расширению файла"]
 
@@ -126,55 +141,26 @@ flowchart TD
 flowchart LR
     T["THINK\nЧто делаем?\nЧто сломается?"]
     P["PLAN\nФайл + шаг + зачем"]
-    G{{"🔒 FROZEN GATE\nЖдём: да / ок / погнали"}}
+    G{{"🔒 FROZEN GATE\nАвторизация пользователя на согласованный scope"}}
     B["BUILD\nОдин файл до конца\nбез TODO"]
     R["REVIEW\nГраницы слоёв?\nОшибки явные?"]
     TS["TEST\nЗапустить\nПоказать вывод"]
 
     T --> P --> G --> B --> R --> TS
-    B -- "план неверен" --> STOP{{"СТОП\nмини-план → ОК → продолжай"}}
+    B -- "план неверен" --> STOP{{"Обновить план\nвопрос только за пределами авторизации"}}
 ```
 
 ---
 
 ## 5. Проверка версии кита
 
-Два независимых механизма: один в агенте (каждая сессия), второй в `install.sh` (каждая установка).
+Общий installer пишет `.agents/kit-meta.json` и manifest владения установленными файлами. Метаданные выбранных клиентских адаптеров сохраняются отдельно для совместимости.
 
-### 6a. Session-start check (CLAUDE.md / cursor-kit-maintenance.mdc)
+Installer проверяет доступную версию GitHub с ограниченным timeout; недоступность сети не блокирует локальную установку. Нативная загрузка общего `AGENTS.md` не запускает обязательный сетевой запрос перед каждой правкой. Legacy Cursor maintenance rule может отдельно использовать свой кэш.
 
-```mermaid
-flowchart TD
-    A["Старт сессии"] --> B["Читаем .claude/kit-version\n= kitVersion"]
-    B --> C{"kit-meta.json\nсуществует?"}
-    C -- нет --> D["Создаём kit-meta.json\n{installedAt, kitVersion}\nСообщаем строкой"]
-    C -- да --> E{"lastCheckedAt\nбыло < 72ч назад?"}
-    D --> Z["✅ Работаем"]
-    E -- да --> F["Берём latestVersion\nиз кэша kit-meta.json"]
-    E -- нет --> G["curl github.../kit-version\n→ latestVersion\n(таймаут 3с)"]
-    G -- ошибка/недоступен --> Z
-    G -- OK --> H["Пишем latestVersion +\nlastCheckedAt в kit-meta.json"]
-    H --> I{"latestVersion\n> kitVersion?"}
-    F --> I
-    I -- нет --> Z
-    I -- да --> J{"notifiedAt\n< 14 дней назад?"}
-    J -- да --> Z
-    J -- нет --> K["Напоминаем обновить:\nверсия + ссылка на CHANGELOG"]
-    K --> L["Пишем notifiedAt\nв kit-meta.json"]
-    L --> Z
-```
+При обновлении pristine файлы сверяются с manifest или хешами известной старой поставки. Изменённые пользователем файлы сохраняются; installer показывает конфликт. Старые отдельные skill directories перемещаются в backup до создания адаптера.
 
-**Поля kit-meta.json:**
-
-| Поле | Кто пишет | Назначение |
-|------|-----------|-----------|
-| `installedAt` | `install.sh` | Дата установки; не трогается при проверке версии |
-| `kitVersion` | `install.sh` | Версия, которая реально стоит в проекте |
-| `latestVersion` | агент (curl) | Последняя версия в репозитории (кэш) |
-| `lastCheckedAt` | агент (curl) | Когда был последний curl; управляет кэшом 72ч |
-| `notifiedAt` | агент | Когда последний раз напомнили; гард 14 дней |
-
-### 6b. Install-time check (install.sh `check_remote_version`)
+### Install-time check (install.sh `check_remote_version`)
 
 ```mermaid
 flowchart LR
@@ -327,7 +313,7 @@ flowchart TD
     L --> L2["fileHashes — sha256 КАЖДОГО\nостального файла скилла"]
     L2 --> L2a["scripts/ — код, который выполнится"]
     L2 --> L2b["references/ — инструкции,\nкоторым агент подчинится"]
-    L --> L3["variants — вторая сборка\n(Cursor-копия impeccable)"]
+    L --> L3["localPath — canonical source\nvariants — архивные исходники impeccable"]
 
     L --> CI{"CI"}
     CI --> C1["check-skills.js\nфайл изменён или не запинен → красный"]

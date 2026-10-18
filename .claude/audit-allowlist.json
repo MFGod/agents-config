@@ -24,6 +24,18 @@
       "lineSha256": "1beb371ac11c88733c307f003424603efe8db450069a451b0528505abc9bb47c",
       "file": ".claude/skills/impeccable/scripts/live-copy-edit-agent.mjs (and the .cursor copy)",
       "reason": "Read in full: a diagnostic message printed TO THE USER explaining why a no-TTY subprocess cannot reach their own `claude /login` credentials in the macOS Keychain, and how to fix it (`claude setup-token`). It neither reads nor transmits any credential; it explains an auth failure."
+    },
+    {
+      "id": "autonomy-escalation",
+      "lineSha256": "639fa2babb04d31bf49e3f36fedcd8971a3383f8bac53acdba54208033889358",
+      "file": ".agents/skills/impeccable/reference/degraded/finish-reviewer.md (mirrored in .claude/agents/impeccable-finish-reviewer.md)",
+      "reason": "Report format for impeccable 4.6.0's finish reviewer. \"added without approval\" is one of the fidelity categories the reviewer reports to the human; it removes nobody from the loop. Reviewed 2026-10-18."
+    },
+    {
+      "id": "autonomy-escalation",
+      "lineSha256": "cf565480491f1d0c92383a8e4c16b9a989e11f11b78126dcb9a926dedb6a1e6f",
+      "file": ".agents/skills/impeccable/reference/delight.md",
+      "reason": "A prohibition: the line is in a list of things delight must never do (play sound without consent or ignore mute settings). Reviewed 2026-10-18."
     }
   ]
 }

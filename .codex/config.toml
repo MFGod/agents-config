@@ -1,0 +1,27 @@
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
+
+[mcp_servers.context7]
+command = "npx"
+args = [
+    "-y",
+    "@upstash/context7-mcp@3.2.1",
+]
+
+[mcp_servers.headroom]
+command = "uvx"
+args = [
+    "--from",
+    "headroom-ai[mcp]==0.27.0",
+    "headroom",
+    "mcp",
+    "serve",
+]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@0.0.76"]
+
+[mcp_servers.skillspector]
+command = "skillspector"
+args = ["mcp"]

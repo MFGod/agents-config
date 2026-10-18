@@ -14,6 +14,7 @@ STACKS=""
 STACKS_GIVEN=false
 CAVEMAN_FLAG=false
 WITH_TOOLS=false
+CODEX_ONLY=false
 # honor NO_COLOR env convention (https://no-color.org)
 if [[ -n "${NO_COLOR:-}" ]]; then _NO_COLOR=true; else _NO_COLOR=false; fi
 
@@ -21,11 +22,12 @@ if [[ -n "${NO_COLOR:-}" ]]; then _NO_COLOR=true; else _NO_COLOR=false; fi
 usage() {
   printf "Использование: %s [TARGET] [--force] [--yes] [--no-color] [--stacks СПИСОК]\n" "$SCRIPT_NAME"
   printf "  TARGET            путь к целевому проекту (по умолчанию: \$PWD)\n"
-  printf "  --force, -f       перезаписать существующие файлы кита\n"
+  printf "  --force, -f       повторная установка; пользовательские отличия сохраняются\n"
   printf "  --yes, -y         авто-подтверждение всех y/N запросов\n"
   printf "  --no-color        отключить цветной вывод\n"
   printf "  --stacks, -s LIST стек-правила через запятую: react,vue,fastapi,django,all,none\n"
   printf "  --caveman         установить Cursor caveman mode (cursor-caveman.mdc, alwaysApply)\n"
+  printf "  --codex-only      установить только общие AGENTS.md, rules и .agents/skills\n"
   printf "  --with-tools      предложить установку внешних тулов (skillspector, agent-reach,\n"
   printf "                    codebase-memory-mcp, paper mcp, claude-video /watch, dcg) — сторонний\n"
   printf "                    код с GitHub, каждый со своим y/N подтверждением\n"
@@ -44,6 +46,7 @@ while [[ $# -gt 0 ]]; do
                   shift ;;
     --caveman)    CAVEMAN_FLAG=true ;;
     --with-tools) WITH_TOOLS=true ;;
+    --codex-only) CODEX_ONLY=true ;;
     --help|-h)    usage; exit 0 ;;
     -*)           printf "Неизвестный флаг: %s\n" "$1" >&2; usage >&2; exit 1 ;;
     *)            if [[ -z "$TARGET" ]]; then TARGET="$1"
@@ -119,14 +122,27 @@ ensure_gitignore_entry() {
 }
 
 
-# Copies src to dst; skips if dst exists and !FORCE; skips silently if src missing.
+# Refuses every existing symlink on a destination path, including dangling links.
+reject_symlink_path() {
+  local current="$1"
+  while [[ "$current" != "$TARGET" ]]; do
+    [[ -L "$current" ]] && die "symlink блокирует установку: $current"
+    local parent
+    parent=$(dirname "$current")
+    [[ "$parent" == "$current" ]] && die "путь вне целевого проекта: $1"
+    current="$parent"
+  done
+}
+
+# Existing project files are preserved; safe owned updates use install-shared.js.
 copy_file_safe() {
   local src="$1" dst="$2"
+  reject_symlink_path "$dst"
   if [[ ! -f "$src" ]]; then
     printf "  %bпропущен%b (нет источника): %s\n" "$YELLOW" "$RESET" "$src" >&2
     return
   fi
-  if [[ -e "$dst" ]] && [[ "$FORCE" == false ]]; then
+  if [[ -e "$dst" ]]; then
     printf "  %bпропущен%b (существует): %s\n" "$YELLOW" "$RESET" "$dst"
     return
   fi
@@ -135,11 +151,24 @@ copy_file_safe() {
   printf "  %bскопирован%b: %s\n" "$GREEN" "$RESET" "$dst"
 }
 
-# Recursively copies src/ → dst/; skips existing files unless FORCE.
+# kit-version belongs to the kit, not the project: overwrite it so it always
+# names the installed release (copy_file_safe would keep the old number).
+copy_kit_version() {
+  local src="$1" dst="$2"
+  reject_symlink_path "$dst"
+  [[ -f "$src" ]] || return 0
+  if [[ -f "$dst" ]] && cmp -s -- "$src" "$dst"; then return 0; fi
+  mkdir -p "$(dirname "$dst")"
+  cat -- "$src" > "$dst"
+  printf "  %bобновлён%b: %s\n" "$GREEN" "$RESET" "$dst"
+}
+
+# Recursively copies src/ → dst/; preserves existing project files.
 # Optional 3rd arg: relative path to exclude (e.g. plugin manifest not needed in installs).
 # Prints a summary line only when files were actually copied.
 copy_dir() {
   local src="$1" dst="$2" exclude="${3:-}" f rel df copied=0 skipped=0
+  reject_symlink_path "$dst"
   if [[ ! -d "$src" ]]; then
     printf "  %bпропущен%b (нет источника): %s\n" "$YELLOW" "$RESET" "$src" >&2
     return
@@ -152,7 +181,8 @@ copy_dir() {
     rel="${f#"$src"/}"
     [[ -n "$exclude" && "$rel" == "$exclude" ]] && continue
     df="$dst/$rel"
-    if [[ -e "$df" ]] && [[ "$FORCE" == false ]]; then
+    reject_symlink_path "$df"
+    if [[ -e "$df" ]]; then
       skipped=$((skipped + 1))
     else
       mkdir -p "$(dirname "$df")"
@@ -181,6 +211,7 @@ copy_stack_rules() {
 # Writes kit-meta.json atomically, preserving latestVersion/lastCheckedAt/notifiedAt from existing file.
 write_kit_meta() {
   local meta_path="$1"
+  reject_symlink_path "$meta_path"
   local latest_ver last_checked notified_at
   latest_ver=$(_read_json_str latestVersion  "$meta_path")
   last_checked=$(_read_json_str lastCheckedAt "$meta_path")
@@ -229,6 +260,7 @@ semver_compare() {
 # Prints version status for label; returns 1 if install should be skipped (up-to-date or blocked downgrade).
 version_check() {
   local meta_path="$1" label="$2"
+  reject_symlink_path "$meta_path"
   local installed_ver
   installed_ver=$(read_meta_version "$meta_path")
 
@@ -349,32 +381,16 @@ install_claude_core() {
   copy_dir "$SCRIPT_DIR/.claude/hooks"  "$TARGET/.claude/hooks" "hooks.json"
   copy_dir "$SCRIPT_DIR/.claude/agents" "$TARGET/.claude/agents"
 
-  # impeccable живёт прямо здесь, без symlink в .agents/: npx impeccable генерирует
-  # harness-специфичную сборку, одним файлом два харнесса не обслужить.
-  for skill in caveman caveman-commit caveman-review caveman-compress caveman-help caveman-stats gstack cavecrew headroom rtk session-teacher debug migrate deploy ui-ux-pro-max impeccable humanizer; do
-    copy_dir "$SCRIPT_DIR/.claude/skills/$skill" "$TARGET/.claude/skills/$skill"
-  done
+  # Common rules and skill adapters are installed once by install-shared.js.
 
-  # External skills vendored into .agents/skills/ — .claude/skills/ holds a symlink
-  # there for local dev. Target gets a plain copy, no symlink.
-  # taste-skill (leonxlnx), self-learning (Kulaxyz), prompt-library (Anthropic),
-  # ux-core (keepsimple.io), emil-design-eng (emilkowalski/skills).
-  for skill in design-taste-frontend emil-design-eng high-end-visual-design industrial-brutalist-ui minimalist-ui prompt-library redesign-existing-projects self-learning ux-core; do
-    copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.claude/skills/$skill"
-  done
-
-  for rule in global-standards dev-workflow structured-response gstack-workflow git-conventions testing-standards external-content; do
-    copy_file_safe "$SCRIPT_DIR/.claude/rules/$rule.md" "$TARGET/.claude/rules/$rule.md"
-  done
-
-  copy_stack_rules "$SCRIPT_DIR/.claude/rules" "$TARGET/.claude/rules" md
-
-  copy_file_safe "$SCRIPT_DIR/.claude/kit-version" "$TARGET/.claude/kit-version"
+  copy_kit_version "$SCRIPT_DIR/.claude/kit-version" "$TARGET/.claude/kit-version"
+  copy_file_safe "$SCRIPT_DIR/MODELS.md" "$TARGET/.claude/MODELS.md"
   [[ -f "$SCRIPT_DIR/.claude/README.md" ]] && \
     copy_file_safe "$SCRIPT_DIR/.claude/README.md" "$TARGET/.claude/README.md"
 
   # settings.json: merge-only при обновлении — пользовательские настройки не трогаем.
   if [[ -f "$SCRIPT_DIR/.claude/settings-template.json" ]]; then
+    reject_symlink_path "$TARGET/.claude/settings.json"
     mkdir -p "$TARGET/.claude"
     if [[ ! -f "$TARGET/.claude/settings.json" ]]; then
       cp -- "$SCRIPT_DIR/.claude/settings-template.json" "$TARGET/.claude/settings.json"
@@ -394,13 +410,6 @@ install_claude_core() {
 
   copy_file_safe "$SCRIPT_DIR/.mcp.json" "$TARGET/.mcp.json"
 
-  # CLAUDE.md: только первая установка, не перезаписываем пользовательскую версию
-  if [[ -f "$SCRIPT_DIR/CLAUDE.md" ]] && [[ ! -f "$TARGET/CLAUDE.md" ]]; then
-    cp -- "$SCRIPT_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
-    printf "  %bсоздан%b: %s\n" "$GREEN" "$RESET" "$TARGET/CLAUDE.md"
-    printf "  %b!%b Адаптируй CLAUDE.md под свой проект.\n" "$YELLOW" "$RESET"
-  fi
-
   write_kit_meta "$TARGET/.claude/kit-meta.json"
 }
 
@@ -411,7 +420,7 @@ install_cursor_core() {
 
   for rule in global-standards dev-workflow structured-response gstack-workflow \
               git-conventions testing-standards session-teacher debug migrate deploy \
-              cursor-kit-maintenance project-profile-bootstrap external-content; do
+              cursor-kit-maintenance project-profile-bootstrap external-content model-efficiency; do
     copy_file_safe "$SCRIPT_DIR/.cursor/rules/$rule.mdc" "$TARGET/.cursor/rules/$rule.mdc"
   done
   [[ "$INSTALL_CAVEMAN" == true ]] && \
@@ -419,21 +428,12 @@ install_cursor_core() {
 
   copy_stack_rules "$SCRIPT_DIR/.cursor/rules" "$TARGET/.cursor/rules" mdc
 
-  # Cursor 2.4+ читает Agent Skills из .cursor/skills/ (тот же SKILL.md-стандарт, что
-  # и Claude Code: автовыбор по description, disable-model-invocation, paths-глобы).
-  # Паритет с Claude Code: тот же набор скиллов, тот же источник .agents/skills/.
-  # impeccable — harness-специфичная сборка, поэтому берётся из .cursor/skills/.
-  for skill in design-taste-frontend emil-design-eng high-end-visual-design industrial-brutalist-ui \
-               minimalist-ui prompt-library redesign-existing-projects self-learning ux-core; do
-    copy_dir "$SCRIPT_DIR/.agents/skills/$skill" "$TARGET/.cursor/skills/$skill"
-  done
-  # ui-ux-pro-max — kit-owned и harness-agnostic; impeccable — harness-специфичная сборка.
-  copy_dir "$SCRIPT_DIR/.claude/skills/ui-ux-pro-max" "$TARGET/.cursor/skills/ui-ux-pro-max"
-  copy_dir "$SCRIPT_DIR/.cursor/skills/impeccable" "$TARGET/.cursor/skills/impeccable"
+  # Cursor discovers shared .agents/skills natively; no new shared copies here.
 
-  copy_file_safe "$SCRIPT_DIR/.cursor/kit-version" "$TARGET/.cursor/kit-version"
-  [[ -f "$SCRIPT_DIR/.cursor/AGENTS.md" ]] && \
-    copy_file_safe "$SCRIPT_DIR/.cursor/AGENTS.md" "$TARGET/.cursor/AGENTS.md"
+  copy_kit_version "$SCRIPT_DIR/.cursor/kit-version" "$TARGET/.cursor/kit-version"
+  copy_file_safe "$SCRIPT_DIR/MODELS.md" "$TARGET/.cursor/MODELS.md"
+  [[ -f "$SCRIPT_DIR/.cursor/README.md" ]] && \
+    copy_file_safe "$SCRIPT_DIR/.cursor/README.md" "$TARGET/.cursor/README.md"
   [[ -f "$SCRIPT_DIR/.cursor/mcp.json" ]] && \
     copy_file_safe "$SCRIPT_DIR/.cursor/mcp.json" "$TARGET/.cursor/mcp.json"
   [[ -f "$SCRIPT_DIR/.cursor/hooks.json" ]] && \
@@ -543,11 +543,12 @@ install_external_tools() {
 [[ -d "$SCRIPT_DIR/.claude" ]] || [[ -d "$SCRIPT_DIR/.cursor" ]] || \
   die "в '$SCRIPT_DIR' не найдены .claude/ или .cursor/."
 [[ -w "$TARGET" ]] || die "нет прав записи в '$TARGET'."
+TARGET=$(cd "$TARGET" && pwd -P)
 
 # --- main ---
 printf "\n%bAgents-config v%s%b\n" "$BOLD" "$KIT_VERSION" "$RESET"
 printf "Целевой проект: %b%s%b\n" "$BOLD" "$TARGET" "$RESET"
-[[ "$FORCE" == true ]] && printf "%b! режим --force: существующие файлы кита будут перезаписаны%b\n" "$YELLOW" "$RESET"
+[[ "$FORCE" == true ]] && printf "%b! режим --force: повторная установка; пользовательские отличия сохраняются%b\n" "$YELLOW" "$RESET"
 printf "\n"
 check_remote_version
 
@@ -573,16 +574,21 @@ check_deps
 
 DO_CLAUDE=false
 DO_CURSOR=false
+DO_CODEX=false
 INSTALL_CAVEMAN=false
 
-if [[ -d "$SCRIPT_DIR/.claude" ]] && ask "Установить Claude Code (.claude/ + .mcp.json)? [y/N]: "; then
+if [[ "$CODEX_ONLY" == false && -d "$SCRIPT_DIR/.claude" ]] && ask "Установить Claude Code (.claude/ + .mcp.json)? [y/N]: "; then
   DO_CLAUDE=true
 fi
-if [[ -d "$SCRIPT_DIR/.cursor" ]] && ask "Установить Cursor (.cursor/)? [y/N]: "; then
+if [[ "$CODEX_ONLY" == false && -d "$SCRIPT_DIR/.cursor" ]] && ask "Установить Cursor (.cursor/)? [y/N]: "; then
   DO_CURSOR=true
 fi
 
-if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
+if [[ "$CODEX_ONLY" == true ]] || ask "Установить Codex (AGENTS.md + .agents/skills, без hooks/config)? [y/N]: "; then
+  DO_CODEX=true
+fi
+
+if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]] || [[ "$DO_CODEX" == true ]]; then
   select_stacks
   printf "\n"
   if [[ "$CAVEMAN_FLAG" == true ]]; then
@@ -592,12 +598,23 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
   fi
 fi
 
+if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]] || [[ "$DO_CODEX" == true ]]; then
+  command -v node &>/dev/null || die "node нужен для безопасной установки общих instructions/skills."
+  reject_symlink_path "$TARGET/.agents/kit-meta.json"
+  shared_installed_version=$(read_meta_version "$TARGET/.agents/kit-meta.json")
+  if [[ "$FORCE" == false && "$(semver_compare "$KIT_VERSION" "$shared_installed_version")" == "lt" ]]; then
+    die "общий kit v$shared_installed_version новее v$KIT_VERSION; используй --force для явного downgrade."
+  fi
+  node "$SCRIPT_DIR/.claude/scripts/install-shared.js" "$SCRIPT_DIR" "$TARGET" \
+    "$DO_CLAUDE" "$DO_CURSOR" "$INSTALL_REACT" "$INSTALL_VUE" "$INSTALL_FASTAPI" "$INSTALL_DJANGO"
+fi
+
 [[ "$DO_CLAUDE" == true ]] && install_claude_core
 [[ "$DO_CURSOR" == true ]] && install_cursor_core
 install_external_tools
 
 printf "\n"
-if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
+if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]] || [[ "$DO_CODEX" == true ]]; then
   printf "%bГотово.%b Agents-config v%s → %s\n" "$GREEN" "$RESET" "$KIT_VERSION" "$TARGET"
   [[ "$DO_CLAUDE" == true ]] && \
     printf "  Хуки: требуется %bnode%b в PATH (.claude/hooks/)\n" "$YELLOW" "$RESET"
@@ -605,7 +622,8 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]]; then
     printf "  Cursor хуки: требуется %bnode%b в PATH (.cursor/hooks/)\n" "$YELLOW" "$RESET"
   [[ "$DO_CURSOR" == true ]] && \
     printf "  %b!%b .cursor/rules/*.mdc — вручную при релизе (source of truth: .claude/rules/). См. .cursor/rules/cursor-kit-maintenance.mdc\n" "$YELLOW" "$RESET"
-  printf "\n  %bMCP серверы подключены автоматически:%b\n" "$BOLD" "$RESET"
+  [[ "$DO_CLAUDE" == true || "$DO_CURSOR" == true ]] && \
+    printf "\n  %bMCP серверы подключены автоматически:%b\n" "$BOLD" "$RESET"
   if [[ "$DO_CLAUDE" == true ]]; then
     printf "  Claude Code (.mcp.json):\n"
     printf "    headroom          — сжатие tool outputs, экономит токены контекста\n"

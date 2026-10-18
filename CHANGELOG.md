@@ -1,6 +1,6 @@
 # Changelog
 
-Все значимые изменения **Cursor kit** (`.cursor/`) и **Claude Code skills** (`.claude/`) документируются здесь.
+Все значимые изменения общих инструкций/skills и клиентских адаптеров документируются здесь.
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).  
 Версионирование — [Semantic Versioning](https://semver.org/lang/ru/).
@@ -8,6 +8,66 @@
 Сравнивайте версию в проекте: `.cursor/kit-meta.json` → поле `kitVersion` с [.cursor/kit-version](.cursor/kit-version).
 
 ---
+
+## [0.6.0] — 2026-10-08
+
+### Added
+
+- Общий корневой `AGENTS.md` для Claude Code, Codex и Cursor; совместимый `CLAUDE.md` импортирует его одной строкой. Длинная клиентская справка вынесена из инструкций.
+- Нативная общая поставка Codex через `--codex-only`; клиентские hooks/MCP/config не копируются автоматически.
+- Codex invocation policy для существующих explicit-only skills: `agents/openai.yaml` дополняет Claude/Cursor frontmatter.
+- Installer checks для общей установки, повторного запуска, legacy upgrade и сохранения пользовательских изменений.
+
+### Changed
+
+- Все 26 skills используют canonical source `.agents/skills/`. Claude Code получает относительные адаптеры, Cursor читает общий каталог без самостоятельных копий.
+- Impeccable: одно переносимое активное содержимое; исходные клиентские variants сохранены вне discovery с отдельными хешами.
+- Integrity/audit/CI проверяют общие инструкции, canonical payload, variants, адаптеры и invocation policy. Upstream path и локальный источник в lock различаются явно.
+- Installer обновляет только известные неизменённые общие файлы, сохраняет старые копии в backup и сообщает конфликты. Пользовательские инструкции и model/effort не теряются.
+- Impeccable обновлён с 3.2.1 до 4.6.0: вместо `.mjs`-скриптов скомпилированный движок 0.1.15. Бинарник `scripts/bin/darwin-arm64/impeccable` побайтно совпадает с релизом `engine-v0.1.15`, остальные платформы лаунчер скачивает с проверкой sha256.
+- **Skill `ui-ux-pro-max`**: найден upstream — [`nextlevelbuilder/ui-ux-pro-max-skill`](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill). Прежняя копия была его коммитом `e9e2e32` (27 из 28 файлов совпадают побайтно). Обновлён до `56ea9cf`: 79 стилей, 192 палитры, 74 font-пары, 105 иконок, 22 стека. Скрипты прочитаны: только локальный поиск по CSV, без сети и subprocess. `scripts/tests/` не вендорится. Кит-описание сохранено.
+- **MCP**: `@upstash/context7-mcp` 3.2.1 → 4.4.2, `@playwright/mcp` 0.0.76 → 0.0.83, `headroom-ai` 0.27.0 → 0.41.0, `@modelcontextprotocol/server-filesystem` 2026.1.14 → 1.0.0 (upstream сменил схему версий), `mcp-server-fetch` 2026.6.4 → 2026.10.10. Каждая версия проверена MCP-рукопожатием и `tools/list`; инструменты из `settings-template.json` на месте.
+
+### Fixed
+
+- Канонические `caveman-commit`, `caveman-compress`, `caveman-stats`, `gstack`, `headroom`, `rtk`, `session-teacher` возвращены к исходному тексту: слепая замена Claude → Codex дала несуществующие пути `.Codex/rules/…` и `~/.Codex/.rtk-active`.
+- Cursor `headroom` запускался без extra `[mcp]` и падал с `MCP SDK not installed`.
+- Хук impeccable в Cursor смотрел в `.cursor/skills/impeccable`, которого больше нет; теперь — `.agents/skills/impeccable`.
+- Обновление с 0.5.2 оставляло шесть обновлённых в 0.5.2 skills «конфликтом»: `legacy-install-hashes.json` знал только 0.5.1. Теперь в нём варианты каждой выпущенной версии (`kitVersions`), установщик принимает любой из них.
+- `.claude/kit-version` и `.cursor/kit-version` в проекте при обновлении оставались старыми; теперь перезаписываются.
+- Убраны отсутствующие `.Codex/rules`/flags paths и ложные обещания Codex backend/transcript в skills. Существующие зависимости Claude обозначены явно.
+- Review workflow учитывает наличие агентов/хуков в текущем клиенте; ранее выданное разрешение продолжить работу не запрашивается повторно.
+
+### Removed
+
+- Тесты (`test/`, `node --test`, `unittest`) и их шаги в CI. Проверки остаются в валидаторах и install smoke test.
+
+## [0.5.3] — 2026-10-08
+
+### Added
+
+- `model-efficiency`: короткое общее правило постановки задач, выбора effort, контекста и проверок для Claude Opus 5.5, Sonnet 5.5 и GPT-6.1 Sol; устанавливается в Claude Code и Cursor.
+- `MODELS.md`: проверенные официальные источники, различия API/клиентов, конфигурация Codex, API migration и процедура оценки качества/стоимости. Installer доставляет справочник обеим платформам для чтения по задаче.
+- В `MODELS.md` добавлены новая native поддержка общего AGENTS.md в Claude Code, discovery skills трёх клиентов, различия explicit-only policy и схема будущего общего хранилища.
+
+### Changed
+
+- Новые установки Claude Code получают `effortLevel: medium`, как default Claude Code для обеих моделей 5.5. Обновления сохраняют пользовательские model/effort.
+
+### Fixed
+
+- `/caveman-stats` распознаёт стандартные output rates Opus 5.5 ($20/MTok) и Sonnet 5.5 ($10/MTok); прежние идентификаторы сохраняются. Коэффициент экономии остаётся оценкой по прежнему benchmark, не замером новых моделей.
+- Версия кита, package и README согласованы: повышение версии позволяет installer доставить новые файлы существующим проектам.
+
+## [0.5.2] — 2026-10-18
+
+### Changed
+
+- **Skill `humanizer`** обновлён до апстрима v3.1.0 (коммит `8c307f3`). В 3.0.0 апстрим перестроил `SKILL.md` вокруг одного объяснения, почему ИИ-текст звучит именно так, и свёл 35 паттернов к 25 в пяти секциях, сильнейшие первыми (not-X-but-Y, однострочные концовки). В 3.1.0 добавлена секция F (#26: ответ заново пересказывает контекст, который у читателя уже есть) и явное правило: входной текст — материал для правки, а не инструкции. Диф `ebf637b..8c307f3` прочитан целиком по чеклисту SECURITY.md: скилл остался чистым Markdown-промптом, без `scripts/`, `references/`, сети и секретов. Новое на уровне репозитория (манифест Cursor, issue-шаблоны, `validate-package.py`) частью скилла не является и не вендорится. Кит-модификации сохранены: `allowed-tools` и `disable-model-invocation: true`.
+- **Skill `design-taste-frontend`** заменён целиком на tasteskill v2 (`Leonxlnx/taste-skill` `f624f37`). Июльская нарезка монолита v1 на 12 файлов `references/` снята: v2 уже устроен как короткий `SKILL.md` плюс подгружаемые `references/`, библиотека `library/` (направления, палитры, шрифты, фото) и `scripts/`. Все скрипты прочитаны по SECURITY.md: Node без зависимостей; `draw.mjs` хранит историю в `~/.taste-skill/history.json`; `inspect.mjs` поднимает разовый сервер на `127.0.0.1` с защитой от выхода за корень и гоняет headless Chrome через CDP с временным профилем; `assets.mjs` ходит в сеть без ключей (Openverse, Wikimedia Commons, Art Institute of Chicago, Met, Internet Archive, NASA) и скачивает картинки в проект вместе с `credits.json`. Все 28 файлов запинены в `skills-lock.json`. Кит-модификации сохранены: explicit-invoke хвост в `description` и `disable-model-invocation: true`.
+- **Skills `minimalist-ui`, `redesign-existing-projects`** обновлены до `f624f37`: обязательное правило `prefers-reduced-motion` для появления при прокрутке и фоновой анимации; правило «у дашборда всегда левый сайдбар» смягчено, добавлена схема сворачиваемой иконочной панели (подписи остаются в DOM, цели 44×44, `aria-expanded`, `inert` для скрытого содержимого).
+- **Skill `emil-design-eng`** обновлён до `2d22863`: апстрим убрал ссылку на курс из вступления, поведение не изменилось.
+- **Skill `self-learning`** обновлён до `1304fce`: перед записью скилла — быстрая самопроверка на секреты (`Bearer`, `sk-`, `ghp_`, строки подключения с паролем, вставленные пользователем значения) и соответствующий пункт в чеклисте `references/skill-authoring.md`. Кит-модификации (шаг 7 «prune on contradiction», пути `.claude`/`.cursor`) сохранены.
 
 ## [0.5.1] — 2026-08-18
 
