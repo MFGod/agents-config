@@ -109,6 +109,23 @@ function syncFile(source, relative) {
   managed[relative] = expected;
 }
 
+// Remove a file the kit no longer ships at this path. Only an unmodified kit copy
+// is backed up and removed; a user-edited copy stays in place with a warning.
+function retireFile(relative) {
+  const output = destination(relative);
+  const stat = fs.lstatSync(output, { throwIfNoEntry: false });
+  if (!stat) { delete previous[relative]; return; }
+  const actual = stat.isFile() ? digest(fs.readFileSync(output)) : null;
+  if (!actual || (actual !== previous[relative] && !legacyFile(relative, actual))) {
+    console.error(`  Retired path kept: ${relative} was edited locally. The kit now ships it elsewhere; merge and remove it manually.`);
+    return;
+  }
+  backup(relative);
+  fs.rmSync(output);
+  delete previous[relative];
+  console.log(`  Retired: ${relative}`);
+}
+
 function syncTree(source, relative) {
   const output = destination(relative);
   const stat = fs.lstatSync(output, { throwIfNoEntry: false });
@@ -169,7 +186,7 @@ function migrateSkill(harness, name, createLink) {
 try {
   // Check the common roots before any mutation to avoid writing through project
   // symlinks. No .codex configuration or hook directory is created here.
-  for (const name of ['.agents', '.agents/skills', '.claude', '.claude/rules', 'AGENTS.md', 'MODELS.md', '.gitignore']) destination(name);
+  for (const name of ['.agents', '.agents/skills', '.agents/rules', '.claude', '.claude/rules', 'AGENTS.md', 'MODELS.md', '.gitignore']) destination(name);
   if (claude) destination('.claude/skills');
   if (cursor) { destination('.cursor'); destination('.cursor/skills'); }
   const manifestPath = destination('.agents/install-manifest.json');
@@ -184,9 +201,16 @@ try {
   const common = fs.readFileSync(path.join(repo, 'AGENTS.md'), 'utf8').trimEnd();
   syncInstructions('AGENTS.md', 'AGENTS.md', 'Project-specific instructions outside this managed block take precedence over kit defaults.\n\n' + common);
   syncFile(path.join(repo, 'MODELS.md'), 'MODELS.md');
-  const coreRules = ['global-standards', 'dev-workflow', 'structured-response', 'gstack-workflow', 'git-conventions', 'testing-standards', 'external-content', 'model-efficiency'];
+  // Core rules are read on demand through the AGENTS.md routing table. Claude Code
+  // preloads every .claude/rules file without `paths`, so only path-scoped rules stay there.
+  const coreRules = ['global-standards', 'dev-workflow', 'structured-response', 'gstack-workflow', 'git-conventions', 'external-content', 'model-efficiency'];
+  const scopedRules = ['testing-standards'];
   const stackRules = ['react-standards', 'vue-standards', 'python-fastapi-standards', 'python-django-standards'];
-  for (const name of [...coreRules, ...stackRules.filter((_, index) => stackFlags[index] === 'true')]) {
+  for (const name of coreRules) {
+    syncFile(path.join(repo, '.agents', 'rules', `${name}.md`), `.agents/rules/${name}.md`);
+    retireFile(`.claude/rules/${name}.md`);
+  }
+  for (const name of [...scopedRules, ...stackRules.filter((_, index) => stackFlags[index] === 'true')]) {
     syncFile(path.join(repo, '.claude', 'rules', `${name}.md`), `.claude/rules/${name}.md`);
   }
   const skillRoot = path.join(repo, '.agents', 'skills');

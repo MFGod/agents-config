@@ -1,8 +1,8 @@
 ---
 description: Git workflow conventions — branches, commits, PRs, merge strategy, agent constraints. Apply to any git work.
-alwaysApply: true
+alwaysApply: false
 ---
-<!-- SYNC: .claude/rules/git-conventions.md -->
+<!-- SYNC: .agents/rules/git-conventions.md -->
 
 # Git Conventions
 

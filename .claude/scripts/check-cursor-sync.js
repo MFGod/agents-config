@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Checks that PAIRED .claude/rules/*.md files are reflected in .cursor/rules/*.mdc.
+// Checks that PAIRED shared rules (.agents/rules/*.md and path-scoped .claude/rules/*.md)
+// are reflected in .cursor/rules/*.mdc.
 // For each paired file: strips frontmatter/.mdc from .mdc, normalizes .md↔.mdc
 // references, then verifies every non-empty line of .md exists in .mdc.
 // Exits 1 if drift detected, 0 if clean.
@@ -8,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
-const CLAUDE_RULES = path.join(ROOT, '.claude', 'rules');
+const RULE_DIRS = [path.join(ROOT, '.agents', 'rules'), path.join(ROOT, '.claude', 'rules')];
 const CURSOR_RULES = path.join(ROOT, '.cursor', 'rules');
 
 // Lines to ignore during comparison (SYNC markers, blank lines).
@@ -32,13 +33,13 @@ function normalizeLines(text, ext) {
     .filter(l => l.trim() !== '' && !SYNC_RE.test(l.trim()));
 }
 
-const mdFiles = fs.readdirSync(CLAUDE_RULES).filter(f => f.endsWith('.md'));
+const mdFiles = RULE_DIRS.flatMap(dir => fs.readdirSync(dir).filter(f => f.endsWith('.md')).map(f => ({ dir, f })));
 
 let failed = 0;
 
-for (const mdFile of mdFiles) {
+for (const { dir, f: mdFile } of mdFiles) {
   const mdcFile = mdFile.replace(/\.md$/, '.mdc');
-  const mdPath = path.join(CLAUDE_RULES, mdFile);
+  const mdPath = path.join(dir, mdFile);
   const mdcPath = path.join(CURSOR_RULES, mdcFile);
 
   if (!fs.existsSync(mdcPath)) continue; // CURSOR-ONLY or not ported yet — skip
@@ -50,7 +51,7 @@ for (const mdFile of mdFiles) {
   const missing = [...mdLines].filter(l => !mdcLines.has(l));
 
   if (missing.length > 0) {
-    console.error(`\nDRIFT: .claude/rules/${mdFile} → .cursor/rules/${mdcFile}`);
+    console.error(`\nDRIFT: ${path.relative(ROOT, mdPath)} → .cursor/rules/${mdcFile}`);
     console.error(`  ${missing.length} line(s) in .md missing from .mdc:`);
     missing.slice(0, 5).forEach(l => console.error(`    - ${l.slice(0, 100)}`));
     if (missing.length > 5) console.error(`    ... and ${missing.length - 5} more`);
@@ -59,7 +60,7 @@ for (const mdFile of mdFiles) {
 }
 
 if (failed > 0) {
-  console.error(`\n${failed} file(s) out of sync. Update .cursor/rules/*.mdc to match .claude/rules/*.md`);
+  console.error(`\n${failed} file(s) out of sync. Update .cursor/rules/*.mdc to match the shared rules`);
   process.exit(1);
 }
 

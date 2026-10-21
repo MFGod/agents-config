@@ -18,13 +18,13 @@
    <type>-<id>-<короткое-описание>
    ```
    Пример: `feat-12-add-go-standards`.
-2. Внеси изменения. Общие инструкции — `AGENTS.md`, skills — `.agents/skills/`. `.claude/skills/` содержит адаптеры; архив исходных impeccable variants — `.agents/variants/`, вне discovery. Общий текст правил — `.claude/rules/`; Cursor `.mdc` синхронизируются и проверяются отдельно.
+2. Внеси изменения. Общие инструкции — `AGENTS.md`, skills — `.agents/skills/`. `.claude/skills/` содержит адаптеры; архив исходных impeccable variants — `.agents/variants/`, вне discovery. Ядро правил — `.agents/rules/` (читается по маршрутам `AGENTS.md`), правила с `paths` — `.claude/rules/`; Cursor `.mdc` синхронизируются и проверяются отдельно. Новое правило без `paths` в `.claude/rules/` не кладите: Claude Code грузит такие файлы в каждую сессию.
 3. Подними версию [.claude/kit-version](.claude/kit-version) и `package.json` (Semantic Versioning); `.cursor/kit-version` — ссылка на общий номер.
 4. Добавь запись в [`CHANGELOG.md`](CHANGELOG.md) (формат Keep a Changelog).
 5. Прогони валидаторы и установку — то же, что проверяет CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
    ```bash
    node .claude/scripts/check-skills.js        # frontmatter, skills-lock, install.sh, симлинки
-   node .claude/scripts/check-cursor-sync.js   # .claude/rules ↔ .cursor/rules
+   node .claude/scripts/check-cursor-sync.js   # .agents/rules + .claude/rules ↔ .cursor/rules
    node .claude/scripts/check-mcp-versions.js  # MCP-пакеты существуют, списки совпадают
    node .claude/scripts/audit-skill-content.js # статический аудит на prompt injection
    bash install.sh /tmp/test-project --yes --stacks all
@@ -39,7 +39,7 @@
 
 ## Стандарты
 
-- **Коммиты** — [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <subject>`. Типы: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`, `revert`. Подробнее — [`.claude/rules/git-conventions.md`](.claude/rules/git-conventions.md).
+- **Коммиты** — [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <subject>`. Типы: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`, `revert`. Подробнее — [`.agents/rules/git-conventions.md`](.agents/rules/git-conventions.md).
 - **Один PR = одно логическое изменение.** Не смешивай фичи.
 - **Размер PR** ≤400 строк diff (исключение: auto-generated, lockfiles).
 - **Описание PR**: что изменено, почему, как проверить.

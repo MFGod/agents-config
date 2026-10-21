@@ -16,7 +16,7 @@ effort: high
 Apply when: a new feature/module spanning ≥3 files; an architectural decision; risk to data, migrations, or contracts; the user asks for the full cycle.
 **Do not apply to:** fixes of ≤2 files, searches, one-line edits.
 
-Follow `.claude/rules/gstack-workflow.md`:
+Follow `.agents/rules/gstack-workflow.md` (plan format: `.agents/rules/structured-response.md`):
 THINK (Phase Assessment) → PLAN (wait for `"да"` / `"ок"` / `"погнали"`) → BUILD (Completeness Principle + subagent hooks) → REVIEW (cavecrew-reviewer) → TEST.
 
 Loop-back (changes architecture/contracts → the PLAN is updated): `СТОП. LOOP-BACK: <что открылось>. Мини-план: <2–4 шага>. Жду ОК.`

@@ -2,6 +2,15 @@
 // PostToolUse: UX review checklist after editing UI files.
 // Triggers on .tsx|.jsx|.vue|.svelte|.html|.css|.scss|.sass|.less
 // Outputs questions Claude must address before declaring work done.
+// Off by default: firing on every UI edit adds noise to small fixes. Enable for a
+// design pass with `echo on > ~/.claude/.ux-review-active`, disable with `off`.
+
+const os = require('os');
+const path = require('path');
+const { readBoolFlag } = require('./caveman-config');
+
+const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+if (readBoolFlag(path.join(configDir, '.ux-review-active')) !== 'on') process.exit(0);
 
 const chunks = [];
 process.stdin.on('data', c => chunks.push(c));

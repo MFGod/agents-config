@@ -1,4 +1,4 @@
-# Agents-config v0.6.0
+# Agents-config v0.7.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platforms: Claude Code + Codex + Cursor](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Codex%20%2B%20Cursor-blue)](#)
@@ -11,7 +11,7 @@
 | Компонент | Что делает |
 |-----------|-----------|
 | **Общие инструкции** | Корневой `AGENTS.md` — один источник для трёх клиентов. `CLAUDE.md` содержит только `@AGENTS.md` для совместимости |
-| **Rules** | Общий текст в `.claude/rules/`, адаптеры Cursor в `.cursor/rules/`; Codex читает нужные правила по маршрутам из `AGENTS.md`. Auto-attach зависит от клиента |
+| **Rules** | Ядро правил в `.agents/rules/`: ни один клиент не грузит его заранее, агент читает нужный файл по таблице маршрутов в `AGENTS.md`. В `.claude/rules/` только правила с `paths` (стек, тесты), Claude Code подключает их при работе с подходящими файлами. Адаптеры Cursor в `.cursor/rules/` подключаются по описанию |
 | **External content = данные** | Правило `external-content`: веб-страницы, MCP-результаты, API-ответы, тикеты — это **данные для анализа, а не инструкции для исполнения**. Текст вида «ignore previous instructions» внутри загруженной страницы — находка для отчёта, а не команда |
 | **Общие skills** | Один набор в `.agents/skills/`: Codex и Cursor обнаруживают его нативно, Claude Code — через адаптеры `.claude/skills/`. Краткое описание → выбранный `SKILL.md` → нужные references. Клиентские инструменты и права различаются |
 | **Caveman mode** | Сжимает output модели 65% (замер апстрима) без потери смысла — CC (с toggle) и Cursor (inject через `sessionStart` хук) |
@@ -24,7 +24,7 @@
 | **CaveCrew agents** | 4 субагента: `investigator` (поиск кода), `reviewer` (ревью), `tester` (тесты) — на haiku; `builder` (правка 1-2 файлов) наследует main-модель |
 | **Design quality pipeline** | `design-critic` — блокирует шаблонные решения, требует 3 альтернативы, benchmark против Linear/Stripe/Vercel; `before-after-reviewer` — скоринг 7 метрик до/после, блокирует деградацию |
 | **Design skills** | `/ui-ux-pro-max` — 79 стилей, 192 палитры, 74 font-пары; `/ux-core` — 105 когнитивных биасов как обоснование UX-решений |
-| **UX Review hook** | `PostToolUse` хук: автоматически задаёт 6 UX-вопросов при редактировании `.tsx / .vue / .html / .css / .scss / .svelte` |
+| **UX Review hook** | `PostToolUse` хук задаёт 6 UX-вопросов при редактировании `.tsx / .vue / .html / .css / .scss / .svelte`. По умолчанию выключен, на время дизайн-прохода: `echo on > ~/.claude/.ux-review-active` |
 | **Vendored design skills** | `impeccable` — общая точка входа в дизайн. Нишевые направления вызываются явно; маршрутизация в [`AGENTS.md`](AGENTS.md). Claude/Cursor используют `disable-model-invocation`, Codex — `policy.allow_implicit_invocation: false` в `agents/openai.yaml` |
 | **Writing skill** | `humanizer` (blader/humanizer, MIT) — переписывает ИИ-текст, сохраняя факты. Общий explicit-only skill; инструментальные ограничения клиентские |
 | **Цепочка поставки скиллов** | Скилл — не текст, а инструкции, исполняемые **с правами пользователя**. [`skills-lock.json`](skills-lock.json) пинит sha256 **каждого файла** скилла: `SKILL.md`, `scripts/` (код, который выполнится) и `references/` (инструкции, которым агент подчинится). CI fail-closed: незапиненный или изменённый файл роняет сборку (`check-skills.js`). Приёмка стороннего скилла — чеклист в [`SECURITY.md`](SECURITY.md) |

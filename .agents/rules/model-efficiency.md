@@ -1,7 +1,3 @@
----
-description: Efficient task framing, verification and context use for Claude Opus 5.5, Sonnet 5.5 and GPT-6.1 Sol.
----
-
 <!-- SYNC: .cursor/rules/model-efficiency.mdc -->
 
 # Model efficiency
@@ -11,6 +7,7 @@ description: Efficient task framing, verification and context use for Claude Opu
 - Use concise, direct instructions. Explain decisions and evidence briefly; do not request private chain-of-thought or add repeated "think harder" instructions.
 - Claude Code 5.5: start at medium effort. Use Sonnet for bounded work and Opus for difficult judgment; raise effort for demonstrated quality needs. Preserve user-selected models and effort.
 - GPT-6.1 Sol API: medium is the default; supported effort is low/medium/high/xhigh/max. Tools require Responses API. Client settings can differ; check the selected client before configuring them.
+- Web research burns context and limits fastest. Fetch a known URL or video subtitles directly first; use deep research only with a narrow question and a stated scope.
 - Delegate independent bounded work when it saves time; give each agent file ownership and a clear deliverable. Run independent reads in parallel and dependent edits/checks sequentially.
 - Keep standing instructions short. Read the shared root MODELS.md only for model selection, configuration or API migration; preserve existing client-specific guide copies on upgrades.
 - Preserve exact code, errors, paths and source citations when compressing tool output. Never summarize or alter opaque thinking/compaction blocks that an API requires for replay.

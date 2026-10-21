@@ -1,7 +1,3 @@
----
-description: Full feature-cycle methodology (Think→Plan→Build→Review→Test). Engage when starting a new feature, designing architecture, on tasks that risk data/contracts, or when the user asks to "plan first".
----
-
 <!-- SYNC: .cursor/rules/gstack-workflow.mdc -->
 
 # gstack Workflow
