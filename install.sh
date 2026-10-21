@@ -27,7 +27,7 @@ usage() {
   printf "  --no-color        отключить цветной вывод\n"
   printf "  --stacks, -s LIST стек-правила через запятую: react,vue,fastapi,django,all,none\n"
   printf "  --caveman         установить Cursor caveman mode (cursor-caveman.mdc, alwaysApply)\n"
-  printf "  --codex-only      установить только общие AGENTS.md, rules и .agents/skills\n"
+  printf "  --codex-only      установить только общие AGENTS.md, .agents/rules и .agents/skills\n"
   printf "  --with-tools      предложить установку внешних тулов (skillspector, agent-reach,\n"
   printf "                    codebase-memory-mcp, paper mcp, claude-video /watch, dcg) — сторонний\n"
   printf "                    код с GitHub, каждый со своим y/N подтверждением\n"
@@ -621,7 +621,7 @@ if [[ "$DO_CLAUDE" == true ]] || [[ "$DO_CURSOR" == true ]] || [[ "$DO_CODEX" ==
   [[ "$DO_CURSOR" == true ]] && \
     printf "  Cursor хуки: требуется %bnode%b в PATH (.cursor/hooks/)\n" "$YELLOW" "$RESET"
   [[ "$DO_CURSOR" == true ]] && \
-    printf "  %b!%b .cursor/rules/*.mdc — вручную при релизе (source of truth: .claude/rules/). См. .cursor/rules/cursor-kit-maintenance.mdc\n" "$YELLOW" "$RESET"
+    printf "  %b!%b .cursor/rules/*.mdc — вручную при релизе (source of truth: .agents/rules/ and .claude/rules/). См. .cursor/rules/cursor-kit-maintenance.mdc\n" "$YELLOW" "$RESET"
   [[ "$DO_CLAUDE" == true || "$DO_CURSOR" == true ]] && \
     printf "\n  %bMCP серверы подключены автоматически:%b\n" "$BOLD" "$RESET"
   if [[ "$DO_CLAUDE" == true ]]; then

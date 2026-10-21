@@ -1,8 +1,8 @@
 ---
 description: Tests, refactoring, security, and dependencies. Engage for tasks about writing tests, code review, refactoring, adding dependencies, or security.
-alwaysApply: true
+alwaysApply: false
 ---
-<!-- SYNC: .claude/rules/dev-workflow.md -->
+<!-- SYNC: .agents/rules/dev-workflow.md -->
 
 # Dev Workflow
 

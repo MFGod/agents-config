@@ -19,7 +19,7 @@ const ROOT = fs.realpathSync(path.join(__dirname, '..', '..'));
 const TARGETS = [
   'AGENTS.md', 'MODELS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.cursor/AGENTS.md',
   '.agents/skills', '.agents/variants', '.claude/skills', '.cursor/skills',
-  '.claude/rules', '.cursor/rules', '.claude/agents',
+  '.agents/rules', '.claude/rules', '.cursor/rules', '.claude/agents',
 ];
 const SKIP_DIRS = new Set(['__pycache__', 'node_modules', '.pytest_cache']);
 const SCAN_EXT = /\.(md|mdc|js|mjs|py|sh|json|ya?ml|txt)$/;

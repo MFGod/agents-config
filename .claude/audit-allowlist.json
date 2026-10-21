@@ -4,13 +4,13 @@
     {
       "id": "instruction-override",
       "lineSha256": "1c6fc36a629ba9b222aa311559858b63804e0afabc8bf13e68df3a776b5f2601",
-      "file": ".claude/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
+      "file": ".agents/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
       "reason": "Our own anti-injection rule, quoting the attacker's phrasing as an example of what to REFUSE. The line teaches the agent to report such text, not to obey it."
     },
     {
       "id": "concealment",
       "lineSha256": "b13954a29d5ea3f1992e3fb9103d375ed273b39763d09eca6a11185551288b47",
-      "file": ".claude/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
+      "file": ".agents/rules/external-content.md (mirrored in .cursor/rules/external-content.mdc)",
       "reason": "Same rule, same purpose: lists \"do not tell the user\" among the phrases that are a FINDING TO REPORT. Quoting an attack is not performing it."
     },
     {

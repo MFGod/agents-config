@@ -47,9 +47,9 @@ model_reasoning_effort = "medium"
 
 Сохраняйте существующие MCP-секции и настройки доступа. Разовый запуск: `codex --model gpt-6.1-sol --config model_reasoning_effort='"medium"'`. Командная строка имеет приоритет над project config. В приложении проверяйте фактически выбранную модель; поддерживаемые уровни зависят от клиента. [Developer settings](https://learn.chatgpt.com/docs/developer-settings), [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-Codex получает проектные инструкции из общего `AGENTS.md`; он маршрутизирует чтение правил из `.claude/rules/` по задаче. Installer доставляет общие инструкции, `MODELS.md` и `.agents/skills` всем выбранным клиентам. `--codex-only` устанавливает общую поставку без автоматической записи `.codex/config.toml`, hooks и MCP.
+Codex получает проектные инструкции из общего `AGENTS.md`; он маршрутизирует чтение правил из `.agents/rules/` по задаче, как и остальные клиенты. Installer доставляет общие инструкции, `MODELS.md` и `.agents/skills` всем выбранным клиентам. `--codex-only` устанавливает общую поставку без автоматической записи `.codex/config.toml`, hooks и MCP.
 
-Общий `AGENTS.md` теперь возможен и для Claude Code; правила его discovery и совместимости skills описаны ниже. Наличие общего файла не подключает автоматически `.claude/rules` в Codex или настройки одного клиента в другой.
+Общий `AGENTS.md` теперь возможен и для Claude Code; правила его discovery и совместимости skills описаны ниже. Наличие общего файла не подключает автоматически настройки одного клиента в другой. Claude Code заранее грузит каждый файл `.claude/rules/` без `paths`, поэтому там лежат только правила с `paths`.
 
 В Cursor выбирайте доступную модель средствами клиента. `effortLevel` Claude Code и `model_reasoning_effort` Codex не настраивают Cursor. Kit доставляет `.cursor/rules/model-efficiency.mdc`; общая справка — корневой `MODELS.md`.
 

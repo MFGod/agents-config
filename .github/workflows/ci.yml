@@ -66,7 +66,7 @@ jobs:
       - name: MCP package version check
         run: node .claude/scripts/check-mcp-versions.js
 
-      - name: cursor-rules sync check (.claude/rules vs .cursor/rules)
+      - name: cursor-rules sync check (shared rules vs .cursor/rules)
         run: node .claude/scripts/check-cursor-sync.js
 
       - name: Skills check (canonical payloads, variants, invocation policy, adapters)
@@ -120,8 +120,12 @@ jobs:
           # Every rule in the repo must reach the target with --stacks all. install.sh
           # copied "frontend-standards" — a name that has not existed since v0.1.0 — so
           # Vue users silently got no Vue rule at all. A name list nobody diffs rots.
-          for f in .claude/rules/*.md; do
+          for f in .agents/rules/*.md .claude/rules/*.md; do
             test -f "/tmp/kit-target/$f" || { echo "MISSING in target: $f"; exit 1; }
+          done
+          # Core rules must not land in .claude/rules: Claude Code preloads every file there without `paths`.
+          for f in .agents/rules/*.md; do
+            test ! -e "/tmp/kit-target/.claude/rules/$(basename "$f")" || { echo "PRELOADED in target: $f"; exit 1; }
           done
           test -f /tmp/kit-target/.cursor/rules/global-standards.mdc
           test -f /tmp/kit-target/.cursor/rules/external-content.mdc

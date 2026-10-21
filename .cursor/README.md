@@ -6,7 +6,7 @@
 
 ## Rules
 
-Клиентские адаптеры `.cursor/rules/*.mdc` соответствуют общим правилам `.claude/rules/*.md`. Проверка: `node .claude/scripts/check-cursor-sync.js`. Стек-правила installer выбирает через `--stacks`.
+Клиентские адаптеры `.cursor/rules/*.mdc` соответствуют общим правилам `.agents/rules/*.md` и path-scoped `.claude/rules/*.md`. Проверка: `node .claude/scripts/check-cursor-sync.js`. Стек-правила installer выбирает через `--stacks`.
 
 ## Hooks и MCP
 

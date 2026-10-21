@@ -1,8 +1,8 @@
 ---
 description: Global engineering standards for any project
-alwaysApply: true
+alwaysApply: false
 ---
-<!-- SYNC: .claude/rules/global-standards.md -->
+<!-- SYNC: .agents/rules/global-standards.md -->
 
 # Global Standards
 

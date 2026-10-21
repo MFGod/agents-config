@@ -9,6 +9,22 @@
 
 ---
 
+## [0.7.0] — 2026-10-21
+
+### Changed
+
+- Ядро правил (`global-standards`, `dev-workflow`, `structured-response`, `gstack-workflow`, `git-conventions`, `external-content`, `model-efficiency`) переехало из `.claude/rules/` в `.agents/rules/`. Claude Code грузит каждый файл `.claude/rules/` без `paths` в каждую сессию, а поле `description` игнорирует, поэтому раньше около 470 строк правил попадали в контекст даже ради опечатки. Теперь их читают по таблице маршрутов в `AGENTS.md`, как это уже делал Codex.
+- `AGENTS.md` переписан: короткий блок «всегда» (границы, проверка, внешний контент), выбор размера задачи S/M/L и таблица «когда что читать».
+- Cursor: `global-standards`, `dev-workflow`, `structured-response`, `git-conventions`, `model-efficiency` подключаются по описанию (`alwaysApply: false`). `external-content` остаётся всегда включённым.
+- Хук `ux-review` по умолчанию выключен. Включение на время дизайн-прохода: `echo on > ~/.claude/.ux-review-active`.
+- Installer переносит неизменённые копии старых `.claude/rules/<core>.md` в `.agents/backups/` и удаляет их; изменённые оставляет с предупреждением. CI проверяет, что ядро не попадает в `.claude/rules/`.
+
+### Fixed
+
+- В `.claude/README.md` описан обход бага rtk 0.42.4: `rtk grep` по одному файлу терял строки совпадений.
+
+---
+
 ## [0.6.0] — 2026-10-08
 
 ### Added

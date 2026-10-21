@@ -86,6 +86,15 @@ SessionStart и UserPromptSubmit хуки — timeout **5 секунд**. PreToo
 
 Требует бинарь `rtk` в `$PATH`.
 
+Известная проблема rtk 0.42.4: `rtk grep` по одному файлу (`grep -n x file.sh`) печатает только `N matches in 0 files` без строк, а `-l` трактует как `--max-len`. Агент получает пустую выдачу и делает неверные выводы. Исключите поиск из перезаписи в конфиге rtk (путь показывает `rtk config`, на macOS это `~/Library/Application Support/rtk/config.toml`):
+
+```toml
+[hooks]
+exclude_commands = ["grep", "rg"]
+```
+
+Проверка: `rtk rewrite 'grep -n x file.sh'` должна вернуть exit 1.
+
 ### `caveman-config.js` — общий модуль
 
 | Функция | Что делает |

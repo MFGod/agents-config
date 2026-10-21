@@ -1,7 +1,3 @@
----
-description: Structured response (ANALYSIS/PLAN/…) for refactoring, new features, architecture, PR review, migrations, and non-trivial logic changes. Not for small edits, code search, questions without changes, or one-line fixes.
----
-
 <!-- SYNC: .cursor/rules/structured-response.mdc -->
 
 # Structured Response Format
